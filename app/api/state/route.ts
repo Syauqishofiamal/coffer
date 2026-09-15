@@ -4,6 +4,7 @@ import { sql, getSettings, getGamification, getBadges, toDateStr } from '@/lib/d
 import { levelProgress } from '@/lib/gamification';
 import { monthOf, monthBounds } from '@/lib/dates';
 import { ensureWeeklyQuests, refreshQuests, listQuests } from '@/lib/quests';
+import { OFF_BUDGET } from '@/lib/constants';
 
 /** Everything the dashboard needs, in one round trip. */
 export async function GET() {
@@ -20,15 +21,27 @@ export async function GET() {
     getSettings(uid), getGamification(uid), getBadges(uid), listQuests(uid, ctx.today),
   ]);
 
+  // Budget totals count discretionary spending only; health commitments are
+  // tracked and exported separately (see OFF_BUDGET in lib/constants).
   const [monthTotal] = (await sql`
     SELECT COALESCE(SUM(amount), 0)::float8 AS total FROM expenses
-    WHERE user_id = ${uid} AND date BETWEEN ${start} AND ${end}`) as unknown as { total: number }[];
+    WHERE user_id = ${uid} AND date BETWEEN ${start} AND ${end}
+      AND category <> ALL(${OFF_BUDGET}::text[])`) as unknown as { total: number }[];
 
   const byCategory = (await sql`
     SELECT category, subtype, COALESCE(SUM(amount), 0)::float8 AS total, COUNT(*)::int AS n
     FROM expenses WHERE user_id = ${uid} AND date BETWEEN ${start} AND ${end}
+      AND category <> ALL(${OFF_BUDGET}::text[])
     GROUP BY category, subtype ORDER BY total DESC`) as unknown as
     { category: string; subtype: string | null; total: number; n: number }[];
+
+  // The off-budget section gets its own month total, split by type.
+  const careRows = (await sql`
+    SELECT subtype, COALESCE(SUM(amount), 0)::float8 AS total, COUNT(*)::int AS n
+    FROM expenses WHERE user_id = ${uid} AND date BETWEEN ${start} AND ${end}
+      AND category = ANY(${OFF_BUDGET}::text[])
+    GROUP BY subtype ORDER BY total DESC`) as unknown as
+    { subtype: string | null; total: number; n: number }[];
 
   const todayRows = (await sql`
     SELECT id, date, category, custom_label, subtype, amount::float8 AS amount, note, created_at
@@ -37,7 +50,8 @@ export async function GET() {
 
   const [todayTotal] = (await sql`
     SELECT COALESCE(SUM(amount), 0)::float8 AS total FROM expenses
-    WHERE user_id = ${uid} AND date = ${ctx.today}`) as unknown as { total: number }[];
+    WHERE user_id = ${uid} AND date = ${ctx.today}
+      AND category <> ALL(${OFF_BUDGET}::text[])`) as unknown as { total: number }[];
 
   const [noSpendToday] = (await sql`
     SELECT COUNT(*)::int AS n FROM no_spend_days
@@ -80,6 +94,10 @@ export async function GET() {
     noSpendToday: noSpendToday.n > 0,
     todayExpenses: todayRows.map((r) => ({ ...r, date: toDateStr(r.date) })),
     byCategory,
+    care: {
+      total: careRows.reduce((sum, r) => sum + r.total, 0),
+      bySubtype: careRows,
+    },
     recurring: recurring.map((r) => ({ ...r, last_logged: r.last_logged ? toDateStr(r.last_logged) : null })),
   });
 }

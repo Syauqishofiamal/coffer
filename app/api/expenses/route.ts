@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireSession, isResponse } from '@/lib/session-guard';
 import { sql, recentAmounts, toDateStr } from '@/lib/db';
 import { logExpense } from '@/lib/actions';
-import { chipModeFor, MAX_CHIPS_FULL, MAX_CHIPS_APPROX, CATEGORY_MAP } from '@/lib/constants';
+import { chipModeFor, MAX_CHIPS_FULL, MAX_CHIPS_APPROX, CATEGORY_MAP,
+         subtypesFor } from '@/lib/constants';
 
 /** GET /api/expenses?chips=transport&subtype=... → recent amount chips */
 export async function GET(req: Request) {
@@ -53,8 +54,15 @@ export async function POST(req: Request) {
   if (category === 'custom' && !customLabel) {
     return NextResponse.json({ error: 'Custom entries need a label' }, { status: 400 });
   }
-  const subtype = category === 'food' && (body.subtype === 'delivery' || body.subtype === 'cooked')
-    ? body.subtype : null;
+  // Validate the subtype against whatever this category actually defines, so a
+  // new split (Health's appointment/travel) does not need this route changed again.
+  const allowed = subtypesFor(category);
+  const subtype = allowed?.some((t) => t.slug === body.subtype)
+    ? String(body.subtype) : null;
+  if (allowed && !subtype) {
+    return NextResponse.json(
+      { error: `${CATEGORY_MAP[category].label} entries need a type` }, { status: 400 });
+  }
   const note = body.note ? String(body.note).slice(0, 280).trim() || null : null;
 
   const result = await logExpense(

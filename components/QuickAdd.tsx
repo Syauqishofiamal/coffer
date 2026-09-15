@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { CATEGORIES, FOOD_SUBTYPES, type CategorySlug } from '@/lib/constants';
+import { CATEGORIES, subtypesFor, type CategorySlug } from '@/lib/constants';
 import { addDays, friendlyDate } from '@/lib/dates';
 import Keypad from './Keypad';
 import type { AppState } from '@/lib/types';
@@ -28,7 +28,7 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
   // Fetch remembered amounts whenever the category/subtype selection settles.
   useEffect(() => {
     if (!category) { setChips(null); return; }
-    if (category === 'food' && !subtype) { setChips(null); return; }
+    if (subtypesFor(category) && !subtype) { setChips(null); return; }
     let cancelled = false;
     const qs = new URLSearchParams({ chips: category });
     if (subtype) qs.set('subtype', subtype);
@@ -47,7 +47,9 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
   }
 
   const numericAmount = parseFloat(amount || '0');
-  const needsSubtype = category === 'food' && !subtype;
+  // Categories that split into types need one chosen before the amount means
+  // anything — a bare "Health" entry could be an appointment fee or a taxi fare.
+  const needsSubtype = category !== null && !!subtypesFor(category) && !subtype;
   const needsLabel = category === 'custom' && customLabel.trim() === '';
   const canSave = category !== null && numericAmount > 0 && !needsSubtype && !needsLabel;
 
@@ -102,10 +104,10 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
         ))}
       </div>
 
-      {/* ── Food subtypes, inline ── */}
-      {category === 'food' && (
+      {/* ── Inline subtypes (Food, Health) ── */}
+      {category && subtypesFor(category) && (
         <div className="subtypes">
-          {FOOD_SUBTYPES.map((s) => (
+          {subtypesFor(category)!.map((s) => (
             <button key={s.slug} type="button" className="subtype"
                     aria-pressed={subtype === s.slug}
                     onClick={() => setSubtype(subtype === s.slug ? null : s.slug)}>
@@ -113,6 +115,12 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
             </button>
           ))}
         </div>
+      )}
+
+      {category === 'care' && (
+        <p className="tiny faint" style={{ margin: '8px 0 0' }}>
+          Kept out of your monthly budget and exported on its own sheet.
+        </p>
       )}
 
       {/* ── Custom label ── */}

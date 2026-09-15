@@ -31,6 +31,11 @@ export interface AppState {
   noSpendToday: boolean;
   todayExpenses: Expense[];
   byCategory: { category: string; subtype: string | null; total: number; n: number }[];
+  /** Off-budget spending (Health), tracked and exported separately. */
+  care: {
+    total: number;
+    bySubtype: { subtype: string | null; total: number; n: number }[];
+  };
   recurring: { id: number; category: string; custom_label: string | null;
                last_amount: number; last_logged: string | null }[];
 }

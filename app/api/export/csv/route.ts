@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSession, isResponse } from '@/lib/session-guard';
 import { sql, toDateStr } from '@/lib/db';
-import { CATEGORY_MAP } from '@/lib/constants';
+import { CATEGORY_MAP, OFF_BUDGET } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic'; // live query, never cached
 
@@ -19,11 +19,17 @@ export async function GET() {
   const rows = (await sql`
     SELECT date, category, subtype, custom_label, amount::float8 AS amount, note
     FROM expenses WHERE user_id = ${ctx.session.userId}
-    ORDER BY date ASC, created_at ASC`) as unknown as Record<string, unknown>[];
+    ORDER BY (category = ANY(${OFF_BUDGET}::text[])), date ASC, created_at ASC`
+  ) as unknown as Record<string, unknown>[];
 
-  const lines = ['Date,Category,Subtype,Custom Label,Amount,Note'];
+  // A CSV is one flat table, so the off-budget split is carried by a Section
+  // column rather than a second sheet. Sorting or filtering on it reproduces
+  // the separation the XLSX gets from its own sheet.
+  const lines = ['Section,Date,Category,Subtype,Custom Label,Amount,Note'];
   for (const r of rows) {
+    const offBudget = OFF_BUDGET.includes(String(r.category));
     lines.push([
+      offBudget ? 'Health' : 'Budget',
       toDateStr(r.date),
       CATEGORY_MAP[String(r.category)]?.label ?? r.category,
       r.subtype ?? '',

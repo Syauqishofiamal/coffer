@@ -5,6 +5,7 @@ import {
 } from './gamification';
 import { evaluateBadges } from './badges';
 import { monthOf, daysInMonth, monthBounds } from './dates';
+import { OFF_BUDGET } from './constants';
 
 export interface LogResult {
   expenseId: number | null;
@@ -68,7 +69,8 @@ async function badgeContext(userId: string, today: string, streak: number) {
 
   const [spent] = (await sql`
     SELECT COALESCE(SUM(amount), 0)::float8 AS total FROM expenses
-    WHERE user_id = ${userId} AND date BETWEEN ${start} AND ${end}`) as unknown as { total: number }[];
+    WHERE user_id = ${userId} AND date BETWEEN ${start} AND ${end}
+      AND category <> ALL(${OFF_BUDGET}::text[])`) as unknown as { total: number }[];
   const [budgetRow] = (await sql`
     SELECT monthly_budget::float8 AS b FROM settings WHERE user_id = ${userId}`) as unknown as { b: number }[];
   const monthUnderBudget = monthFullyLogged && spent.total > 0 && spent.total <= budgetRow.b;

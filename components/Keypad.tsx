@@ -29,8 +29,13 @@ export default function Keypad({
   const [isTouch, setIsTouch] = useState(true);
 
   useEffect(() => {
-    const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    setIsTouch(touch);
+    // Treat anything with a touchscreen and no real hover as touch-first. The
+    // maxTouchPoints check catches devices whose pointer media query reports
+    // "fine" despite having no physical keyboard.
+    const coarse = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const hasTouch = navigator.maxTouchPoints > 0;
+    const narrow = window.matchMedia('(max-width: 820px)').matches;
+    setIsTouch(coarse || (hasTouch && narrow));
   }, []);
 
   // Focus the field on laptops each time a category is picked, so typing can

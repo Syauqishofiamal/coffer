@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { requireSession, isResponse } from '@/lib/session-guard';
 import { sql, getSettings, toDateStr } from '@/lib/db';
-import { CATEGORY_MAP } from '@/lib/constants';
+import { CATEGORY_MAP, OFF_BUDGET } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic'; // always a live query, never cached
 
@@ -40,8 +40,14 @@ export async function GET() {
   wb.created = new Date();
 
   const moneyFmt = `"${currency} "#,##0.00`;
+
+  // Off-budget rows are kept out of the monthly sheets and the Summary, and get
+  // their own sheet instead. Mixing them in would misstate every month total.
+  const budgeted = rows.filter((r) => !OFF_BUDGET.includes(r.category));
+  const careRows = rows.filter((r) => OFF_BUDGET.includes(r.category));
+
   const byMonth = new Map<string, Row[]>();
-  for (const r of rows) {
+  for (const r of budgeted) {
     const m = r.date.slice(0, 7);
     if (!byMonth.has(m)) byMonth.set(m, []);
     byMonth.get(m)!.push(r);
@@ -80,15 +86,15 @@ export async function GET() {
   // ── Summary: rows = category, columns = month ──
   const summary = wb.addWorksheet('Summary');
   const months = [...byMonth.keys()].sort();
-  const cats = [...new Set(rows.map((r) => r.category))];
+  const cats = [...new Set(budgeted.map((r) => r.category))];
   summary.addRow(['Category', ...months, 'Total']);
   summary.getRow(1).font = { bold: true };
   summary.views = [{ state: 'frozen', ySplit: 1 }];
 
   for (const c of cats) {
     const cells = months.map((m) => money(
-      rows.filter((r) => r.category === c && r.date.startsWith(m))
-          .reduce((s, r) => s + r.amount, 0)));
+      budgeted.filter((r) => r.category === c && r.date.startsWith(m))
+              .reduce((s, r) => s + r.amount, 0)));
     summary.addRow([
       CATEGORY_MAP[c]?.label ?? c, ...cells, money(cells.reduce((s, v) => s + v, 0)),
     ]);
@@ -96,14 +102,50 @@ export async function GET() {
   const grand = summary.addRow([
     'All categories',
     ...months.map((m) => money(
-      rows.filter((r) => r.date.startsWith(m)).reduce((s, r) => s + r.amount, 0))),
-    money(rows.reduce((s, r) => s + r.amount, 0)),
+      budgeted.filter((r) => r.date.startsWith(m)).reduce((s, r) => s + r.amount, 0))),
+    money(budgeted.reduce((s, r) => s + r.amount, 0)),
   ]);
   grand.font = { bold: true };
   for (let i = 2; i <= months.length + 2; i++) summary.getColumn(i).numFmt = moneyFmt;
   autofit(summary);
 
-  if (byMonth.size === 0) {
+  // ── Health: its own sheet, never folded into the monthly totals above ──
+  if (careRows.length > 0) {
+    const care = wb.addWorksheet('Health');
+    care.addRow(['Date', 'Type', 'Amount', 'Note']);
+    care.getRow(1).font = { bold: true };
+    care.getRow(1).fill = {
+      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' },
+    };
+    care.views = [{ state: 'frozen', ySplit: 1 }];
+
+    for (const r of careRows) {
+      care.addRow([
+        r.date,
+        r.subtype ? r.subtype[0].toUpperCase() + r.subtype.slice(1) : '',
+        r.amount,
+        r.note ?? '',
+      ]);
+    }
+    care.getColumn(3).numFmt = moneyFmt;
+
+    const sessions = careRows.filter((r) => r.subtype === 'session');
+    const travel = careRows.filter((r) => r.subtype === 'travel');
+
+    care.addRow([]);
+    const mk = (label: string, items: Row[]) => {
+      const row = care.addRow(['', label, money(items.reduce((s, r) => s + r.amount, 0)), '']);
+      row.getCell(3).numFmt = moneyFmt;
+      return row;
+    };
+    mk('Sessions', sessions);
+    mk('Travel', travel);
+    mk('Total', careRows).font = { bold: true };
+
+    autofit(care);
+  }
+
+  if (byMonth.size === 0 && careRows.length === 0) {
     const ws = wb.addWorksheet('No data');
     ws.addRow(['No expenses logged yet.']);
   }

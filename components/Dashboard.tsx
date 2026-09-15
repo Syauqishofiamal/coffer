@@ -1,5 +1,5 @@
 'use client';
-import { CATEGORY_MAP } from '@/lib/constants';
+import { CATEGORY_MAP, CARE_SUBTYPES } from '@/lib/constants';
 import { BADGES } from '@/lib/badges';
 import { formatMoney } from '@/lib/dates';
 import EntryList from './EntryList';
@@ -160,6 +160,33 @@ export default function Dashboard({
                     width: `${(c.total / max) * 100}%`, background: 'var(--accent)',
                   }} />
                 </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Health: tracked, deliberately outside the budget ── */}
+      {state.care && state.care.total > 0 && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div className="spread" style={{ marginBottom: 4 }}>
+            <div className="screen-title" style={{ margin: 0 }}>🩺 Health</div>
+            <span className="small num" style={{ fontWeight: 700 }}>
+              {formatMoney(state.care.total, cur)}
+            </span>
+          </div>
+          <p className="tiny faint" style={{ margin: '0 0 10px' }}>
+            This month, outside your budget.
+          </p>
+          {state.care.bySubtype.map((r) => {
+            const def = CARE_SUBTYPES.find((c) => c.slug === r.subtype);
+            return (
+              <div key={r.subtype ?? 'none'} className="spread" style={{ marginBottom: 6 }}>
+                <span className="small">
+                  {def?.icon ?? '•'} {def?.label ?? 'Other'}
+                  <span className="faint"> · {r.n}</span>
+                </span>
+                <span className="small num">{formatMoney(r.total, cur)}</span>
               </div>
             );
           })}

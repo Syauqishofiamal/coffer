@@ -1,6 +1,7 @@
 import { sql } from './db';
 import { weekStart, addDays } from './dates';
 import { XP_QUEST_COMPLETE } from './gamification';
+import { OFF_BUDGET } from './constants';
 
 // ── Weekly quests ───────────────────────────────────────────────────────────
 // 2–3 at a time, generated from the user's OWN data so targets are achievable.
@@ -29,6 +30,8 @@ export async function ensureWeeklyQuests(userId: string, today: string): Promise
       WHERE user_id = ${userId} AND category = 'transport' AND date >= ${since}
       GROUP BY date_trunc('week', date)
     ) w`) as unknown as { avg: number }[];
+  // Note: health travel is category 'care', not 'transport', so it never
+  // inflates this target nor counts against the quest below.
 
   // Targets sit slightly above recent behaviour: reachable, not trivial.
   const cookedTarget = Math.max(2, Math.min(5, Math.round(cooked.n / 4) + 1));
@@ -71,7 +74,9 @@ export async function refreshQuests(userId: string, today: string): Promise<stri
   ) as unknown as { n: number }[];
   const [tspend] = (await sql`
     SELECT COALESCE(SUM(amount), 0)::float8 AS total FROM expenses
-    WHERE user_id = ${userId} AND category = 'transport' AND date BETWEEN ${ws} AND ${wEnd}`
+    WHERE user_id = ${userId} AND category = 'transport'
+      AND category <> ALL(${OFF_BUDGET}::text[])
+      AND date BETWEEN ${ws} AND ${wEnd}`
   ) as unknown as { total: number }[];
 
   const progress: Record<string, number> = {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSession, isResponse } from '@/lib/session-guard';
 import { sql, toDateStr } from '@/lib/db';
+import { OFF_BUDGET } from '@/lib/constants';
 import { monthOf, monthBounds } from '@/lib/dates';
 
 /** GET /api/history?month=YYYY-MM&category=slug */
@@ -12,6 +13,9 @@ export async function GET(req: Request) {
     ? url.searchParams.get('month')! : monthOf(ctx.today);
   const category = url.searchParams.get('category');
   const { start, end } = monthBounds(month);
+  // With no category filter, history shows budgeted spending only, matching
+  // the dashboard. Selecting the off-budget category shows it on its own.
+  const hideOffBudget = category === null;
 
   const rows = (await sql`
     SELECT id, date, category, custom_label, subtype, amount::float8 AS amount, note, created_at
@@ -19,13 +23,16 @@ export async function GET(req: Request) {
     WHERE user_id = ${ctx.session.userId}
       AND date BETWEEN ${start} AND ${end}
       AND (${category}::text IS NULL OR category = ${category})
+      AND (NOT ${hideOffBudget} OR category <> ALL(${OFF_BUDGET}::text[]))
     ORDER BY date DESC, created_at DESC`) as unknown as Record<string, unknown>[];
 
   const [total] = (await sql`
     SELECT COALESCE(SUM(amount), 0)::float8 AS total FROM expenses
     WHERE user_id = ${ctx.session.userId}
       AND date BETWEEN ${start} AND ${end}
-      AND (${category}::text IS NULL OR category = ${category})`) as unknown as { total: number }[];
+      AND (${category}::text IS NULL OR category = ${category})
+      AND (NOT ${hideOffBudget} OR category <> ALL(${OFF_BUDGET}::text[]))`
+  ) as unknown as { total: number }[];
 
   const months = (await sql`
     SELECT DISTINCT to_char(date, 'YYYY-MM') AS m FROM expenses
