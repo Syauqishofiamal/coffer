@@ -3,6 +3,7 @@ import { CATEGORY_MAP, CARE_SUBTYPES } from '@/lib/constants';
 import { BADGES } from '@/lib/badges';
 import { formatMoney } from '@/lib/dates';
 import EntryList from './EntryList';
+import StreakStrip from './StreakStrip';
 import type { AppState, Expense } from '@/lib/types';
 
 /** Time-of-day greeting. Uses the device clock, which is the user's own. */
@@ -74,8 +75,8 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* ── Level and streak, side by side ── */}
-      <div className="duo">
+      {/* ── Level, then the streak strip on its own full-width row ── */}
+      <div className="duo duo-stack">
         <div className="card">
           <span className="pill pill-gold">Level {xp.level}</span>
           <div className="tiny faint num" style={{ margin: '8px 0 6px' }}>
@@ -86,14 +87,10 @@ export default function Dashboard({
           </div>
         </div>
         <div className="card">
-          <div className="row" style={{ gap: 8 }}>
-            <span style={{ fontSize: 20 }} aria-hidden>🔥</span>
-            <span className="num" style={{ fontSize: 20, fontWeight: 700 }}>
-              {streak.current}
-            </span>
-            <span className="small muted">day{streak.current === 1 ? '' : 's'}</span>
-          </div>
-          <div className="tiny faint" style={{ marginTop: 8 }}>
+          <StreakStrip today={state.today}
+                       activeDates={streak.activeDates ?? []}
+                       current={streak.current} />
+          <div className="tiny faint" style={{ marginTop: 'var(--s2)' }}>
             {streak.freezeAvailable ? '❄️ Freeze ready' : '❄️ Freeze used'}
           </div>
         </div>

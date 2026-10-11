@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireSession, isResponse } from '@/lib/session-guard';
 import { sql, getSettings, getGamification, getBadges, toDateStr } from '@/lib/db';
 import { levelProgress } from '@/lib/gamification';
-import { monthOf, monthBounds } from '@/lib/dates';
+import { monthOf, monthBounds, addDays } from '@/lib/dates';
 import { ensureWeeklyQuests, refreshQuests, listQuests } from '@/lib/quests';
 import { OFF_BUDGET } from '@/lib/constants';
 
@@ -57,6 +57,18 @@ export async function GET() {
     SELECT COUNT(*)::int AS n FROM no_spend_days
     WHERE user_id = ${uid} AND date = ${ctx.today}`) as unknown as { n: number }[];
 
+  // Days in the trailing week with any activity, for the streak strip. An
+  // explicit no-spend day counts exactly like a logged expense.
+  const weekAgo = addDays(ctx.today, -6);
+  const activeRows = (await sql`
+    SELECT DISTINCT d FROM (
+      SELECT date AS d FROM expenses
+        WHERE user_id = ${uid} AND date BETWEEN ${weekAgo} AND ${ctx.today}
+      UNION
+      SELECT date AS d FROM no_spend_days
+        WHERE user_id = ${uid} AND date BETWEEN ${weekAgo} AND ${ctx.today}
+    ) t ORDER BY d`) as unknown as { d: unknown }[];
+
   const recurring = (await sql`
     SELECT id, category, custom_label, last_amount::float8 AS last_amount, last_logged
     FROM recurring WHERE user_id = ${uid} ORDER BY category`) as unknown as Record<string, unknown>[];
@@ -87,6 +99,7 @@ export async function GET() {
       longest: gam.longest_streak,
       lastActive: gam.last_active_date,
       freezeAvailable: gam.freezes_used_month !== month,
+      activeDates: activeRows.map((r) => toDateStr(r.d)),
     },
     badges,
     quests,

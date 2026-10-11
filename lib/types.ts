@@ -24,7 +24,12 @@ export interface AppState {
   };
   budget: { total: number; spent: number; remaining: number; fraction: number; over: boolean };
   xp: { total: number; level: number; xpIntoLevel: number; xpForNextLevel: number; progress: number };
-  streak: { current: number; longest: number; lastActive: string | null; freezeAvailable: boolean };
+  streak: {
+    current: number; longest: number; lastActive: string | null;
+    freezeAvailable: boolean;
+    /** Days in the trailing week with activity, for the streak strip. */
+    activeDates: string[];
+  };
   badges: string[];
   quests: QuestView[];
   todayTotal: number;

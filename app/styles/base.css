@@ -32,6 +32,33 @@
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   --safe-b: env(safe-area-inset-bottom, 0px);
+
+  /* ── Type scale ───────────────────────────────────────────────────────────
+     A fifth-based scale, not arbitrary pixels. Eighteen ad-hoc sizes had crept
+     in; these seven cover every need and guarantee that two things meant to
+     look equal actually are. */
+  --t-micro: 11px;   /* uppercase labels, meta */
+  --t-small: 13px;   /* secondary text */
+  --t-body:  15px;   /* default */
+  --t-lead:  17px;   /* emphasis, buttons */
+  --t-title: 21px;   /* card headings, stat values */
+  --t-head:  27px;   /* screen headings, primary numbers */
+  --t-hero:  38px;   /* the amount being entered */
+
+  /* ── Spacing ──────────────────────────────────────────────────────────────
+     A 4px grid. Every margin and padding is one of these, so vertical rhythm
+     holds across cards instead of stuttering by a pixel or two. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+
+  /* Consistent easing: everything accelerates out, settles with slight
+     overshoot. One curve for the whole app reads as one piece of software. */
+  --ease: cubic-bezier(.2, .8, .25, 1);
+  --ease-pop: cubic-bezier(.2, .9, .3, 1.25);
 }
 
 /* Light theme only when the viewer explicitly asks for it. */

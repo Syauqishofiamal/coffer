@@ -24,6 +24,10 @@ export default function AppShell({ isDemo }: { isDemo: boolean }) {
   const [toast, setToast] = useState<(Feedback & { expenseId: number | null }) | null>(null);
   const [celebration, setCelebration] = useState<Feedback['celebrate']>(null);
   const tempId = useRef(-1);
+  // Each award bumps `n` and carries the amount earned. The amount is passed
+  // explicitly rather than inferred from before/after totals, because the
+  // pulse fires immediately while the refreshed state arrives a tick later.
+  const [xpPulse, setXpPulse] = useState({ n: 0, gained: 0 });
 
   const refresh = useCallback(async () => {
     const res = await fetch('/api/state');
@@ -73,6 +77,9 @@ export default function AppShell({ isDemo }: { isDemo: boolean }) {
       if (!res.ok) throw new Error('save failed');
       const result: LogResponse = await res.json();
       const fb = buildFeedback(result, 'expense');
+      if (result.xpGained > 0) {
+        setXpPulse((p) => ({ n: p.n + 1, gained: result.xpGained }));
+      }
       setToast({ ...fb, expenseId: result.expenseId });
       if (fb.celebrate) setCelebration(fb.celebrate);
       await refresh();
@@ -112,6 +119,9 @@ export default function AppShell({ isDemo }: { isDemo: boolean }) {
     if (!res.ok) return;
     const result: LogResponse = await res.json();
     const fb = buildFeedback(result, 'no_spend');
+    if (result.xpGained > 0) {
+      setXpPulse((p) => ({ n: p.n + 1, gained: result.xpGained }));
+    }
     // No undo target: a no-spend day has no expense row behind it.
     setToast({ ...fb, expenseId: null });
     if (fb.celebrate) setCelebration(fb.celebrate);
@@ -166,7 +176,9 @@ export default function AppShell({ isDemo }: { isDemo: boolean }) {
         </div>
       )}
 
-      {tab === 'add' && <QuickAdd state={state} onSave={save} onNoSpend={noSpend} />}
+      {tab === 'add' && (
+        <QuickAdd state={state} onSave={save} onNoSpend={noSpend} xpPulse={xpPulse} />
+      )}
       {tab === 'today' && (
         <Dashboard state={state} onEdit={editExpense} onDelete={deleteExpense} />
       )}

@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react';
 import { CATEGORIES, subtypesFor, type CategorySlug } from '@/lib/constants';
 import { addDays, friendlyDate } from '@/lib/dates';
 import Keypad from './Keypad';
+import XpMeter from './XpMeter';
 import type { AppState } from '@/lib/types';
 
 interface Props {
   state: AppState;
+  /** Signals each XP award and the amount earned, so the meter can animate. */
+  xpPulse: { n: number; gained: number };
   onSave: (e: {
     date: string; category: string; customLabel: string | null;
     subtype: string | null; amount: number; note: string | null;
@@ -14,7 +17,7 @@ interface Props {
   onNoSpend: () => void;
 }
 
-export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
+export default function QuickAdd({ state, onSave, onNoSpend, xpPulse }: Props) {
   const today = state.today;
   const [date, setDate] = useState(today);
   const [category, setCategory] = useState<CategorySlug | null>(null);
@@ -24,6 +27,7 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
   const [note, setNote] = useState('');
   const [showNote, setShowNote] = useState(false);
   const [chips, setChips] = useState<{ amounts: number[]; mode: 'full' | 'approx' } | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
 
   // Fetch remembered amounts whenever the category/subtype selection settles.
   useEffect(() => {
@@ -61,6 +65,10 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
       subtype, amount: Math.round(numericAmount * 100) / 100,
       note: note.trim() || null,
     });
+    // Confirm on the button itself, then clear. Never blocks the next entry.
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 900);
+
     // Reset to a ready state immediately — never navigate away.
     setAmount(''); setNote(''); setShowNote(false);
     setCategory(null); setSubtype(null); setCustomLabel('');
@@ -72,6 +80,10 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
 
   return (
     <div className="screen quickadd">
+      {/* Reward lands on the screen where it is earned. */}
+      <XpMeter level={state.xp.level} xpInto={state.xp.xpIntoLevel}
+               xpFor={state.xp.xpForNextLevel} pulse={xpPulse} />
+
       {/* ── Date ── */}
       <div className="row" style={{ marginBottom: 14 }}>
         <button type="button" className={`chip ${date === today ? 'chip-selected' : ''}`}
@@ -173,8 +185,13 @@ export default function QuickAdd({ state, onSave, onNoSpend }: Props) {
 
       {/* Sticky so Save is always in reach, never scrolled under the tab bar. */}
       <div className="save-dock">
-        <button type="button" className="btn" disabled={!canSave} onClick={save}>
-          {canSave ? `Save ${state.settings.currency} ${numericAmount.toFixed(2)}` : 'Save'}
+        <button type="button" className={`btn ${justSaved ? 'btn-saved' : ''}`}
+                disabled={!canSave && !justSaved} onClick={save}>
+          {justSaved
+            ? '✓ Saved'
+            : canSave
+              ? `Save ${state.settings.currency} ${numericAmount.toFixed(2)}`
+              : 'Save'}
         </button>
       </div>
 
