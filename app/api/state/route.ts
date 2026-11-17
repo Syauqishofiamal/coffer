@@ -43,6 +43,13 @@ export async function GET() {
     GROUP BY subtype ORDER BY total DESC`) as unknown as
     { subtype: string | null; total: number; n: number }[];
 
+  // Per-day budgeted spending this month, for the daily bar chart.
+  const dailyRows = (await sql`
+    SELECT date AS d, COALESCE(SUM(amount), 0)::float8 AS total FROM expenses
+    WHERE user_id = ${uid} AND date BETWEEN ${start} AND ${end}
+      AND category <> ALL(${OFF_BUDGET}::text[])
+    GROUP BY date ORDER BY date`) as unknown as { d: unknown; total: number }[];
+
   const todayRows = (await sql`
     SELECT id, date, category, custom_label, subtype, amount::float8 AS amount, note, created_at
     FROM expenses WHERE user_id = ${uid} AND date = ${ctx.today}
@@ -107,6 +114,7 @@ export async function GET() {
     noSpendToday: noSpendToday.n > 0,
     todayExpenses: todayRows.map((r) => ({ ...r, date: toDateStr(r.date) })),
     byCategory,
+    daily: dailyRows.map((r) => ({ date: toDateStr(r.d), total: r.total })),
     care: {
       total: careRows.reduce((sum, r) => sum + r.total, 0),
       bySubtype: careRows,

@@ -10,12 +10,14 @@ import { addDays } from '@/lib/dates';
  * filled in yet, which is a far better motivator than a warning.
  */
 export default function StreakStrip({
-  today, activeDates, current,
+  today, activeDates, current, compact = false,
 }: {
   today: string;
   /** 'YYYY-MM-DD' strings with an expense or an explicit no-spend day. */
   activeDates: string[];
   current: number;
+  /** Dots only — for cards that show the streak count themselves. */
+  compact?: boolean;
 }) {
   const active = new Set(activeDates);
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
@@ -23,11 +25,11 @@ export default function StreakStrip({
 
   return (
     <div className="streak">
-      <div className="streak-head">
+      {!compact && <div className="streak-head">
         <span className="streak-flame" aria-hidden>🔥</span>
         <span className="streak-count num">{current}</span>
         <span className="streak-unit">day{current === 1 ? '' : 's'}</span>
-      </div>
+      </div>}
       <div className="streak-dots" role="img"
            aria-label={`${activeDates.length} of the last 7 days logged`}>
         {days.map((d) => {

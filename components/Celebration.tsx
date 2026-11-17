@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useMemo } from 'react';
+import Mascot from './Mascot';
 
-const COLORS = ['#4f7a5b', '#b8873b', '#c4622d', '#6f9d7c', '#d9ad5e'];
+const COLORS = ['#2d3142', '#f6b93b', '#7fb3e0', '#ffffff', '#ef7a52'];
 
 /** Milestone moment: under 2s, dismissible, and silent under reduced-motion. */
 export default function Celebration({
@@ -37,7 +38,10 @@ export default function Celebration({
       )}
       <div className="celebrate" onClick={onDismiss} role="dialog" aria-modal="true">
         <div className="celebrate-card">
-          <div className="celebrate-ico" aria-hidden>{icon}</div>
+          <div className="celebrate-hero">
+            <Mascot mood="cheer" className="celebrate-mascot" />
+            <span className="celebrate-ico" aria-hidden>{icon}</span>
+          </div>
           <div className="celebrate-title">{title}</div>
           {body && <div className="muted small">{body}</div>}
           <div className="tiny faint" style={{ marginTop: 12 }}>Tap to dismiss</div>

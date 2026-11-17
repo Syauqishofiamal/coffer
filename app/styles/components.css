@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   /* Room for the fixed tab bar. */
-  padding-bottom: calc(64px + var(--safe-b));
+  padding-bottom: calc(80px + var(--safe-b));
 }
 .screen { padding: 10px 14px 20px; flex: 1; }
 .screen-title {
@@ -31,30 +31,42 @@
 .tiny { font-size: var(--t-small); }
 .small { font-size: var(--t-body); }
 .num {
-  font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   letter-spacing: -.01em;
 }
 
-/* ── Tab bar ────────────────────────────────────────────────────────────── */
+/* ── Tab bar ────────────────────────────────────────────────────────────
+   White bar with rounded top; the active tab is a filled teal circle. */
 .tabs {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
-  display: flex; justify-content: center; gap: 2px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(12px);
-  border-top: 1px solid var(--border);
-  padding: 6px 8px calc(6px + var(--safe-b));
+  display: flex; justify-content: center;
+  padding: 0 var(--s3) var(--safe-b);
+  pointer-events: none;
 }
-.tabs-inner { display: flex; width: 100%; max-width: 480px; }
+.tabs-inner {
+  pointer-events: auto;
+  display: flex; justify-content: space-around; width: 100%; max-width: 480px;
+  padding: 10px 14px calc(10px);
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 -6px 24px rgba(31,42,68,.08);
+}
 .tab {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  gap: 2px; padding: 6px 4px; border-radius: 12px;
-  color: var(--text-faint); font-size: var(--t-micro); font-weight: 600;
-  transition: color .15s, background .15s;
+  width: 54px; height: 54px; min-height: 54px; border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--text-faint);
+  transition: color .15s, background .2s var(--ease), transform .2s var(--ease-pop);
 }
-.tab[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
-.tab-ico { font-size: var(--t-lead); line-height: 1; }
+.tab:active { transform: scale(.92); }
+.tab[aria-current="page"] {
+  color: var(--accent-text); background: var(--accent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.tab-ico {
+  width: 24px; height: 24px; fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
 
 /* ── Category grid ──────────────────────────────────────────────────────── */
 .cat-grid {
@@ -144,8 +156,8 @@
 
 .stat { display: flex; flex-direction: column; gap: 1px; }
 .stat-value {
-  font-size: var(--t-head); font-weight: 700; letter-spacing: -.02em;
-  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: var(--t-head); font-weight: 800; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
 }
 .stat-label { font-size: var(--t-micro); color: var(--text-faint); font-weight: 600;
   letter-spacing: .04em; text-transform: uppercase; }
@@ -177,7 +189,7 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .entry-amt {
-  font-weight: 700; font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-weight: 800; font-variant-numeric: tabular-nums;
 }
 .icon-btn {
   width: 36px; height: 36px; min-height: 36px; display: grid; place-items: center;
@@ -199,7 +211,7 @@
 /* ── Toast ──────────────────────────────────────────────────────────────── */
 .toast-wrap {
   position: fixed; left: 0; right: 0; z-index: 60;
-  bottom: calc(72px + var(--safe-b));
+  bottom: calc(88px + var(--safe-b));
   display: flex; justify-content: center; padding: 0 16px;
   pointer-events: none;
 }
@@ -306,7 +318,7 @@
   position: sticky;
   /* Clear the fixed tab bar (~64px) plus the safe-area inset, so the button
      lands above it rather than behind it. */
-  bottom: calc(72px + var(--safe-b));
+  bottom: calc(84px + var(--safe-b));
   z-index: 30;
   margin-top: 12px;
   padding: 10px 0 2px;
@@ -567,183 +579,207 @@ a.btn, a.btn-ghost { text-decoration: none; }
 }
 
 
-/* ── Home: game HUD ─────────────────────────────────────────────────────────
-   The top panel is the screen's one hero: a glowing card holding the budget
-   ring, XP and streak. Everything below it is quieter, so the eye lands here
-   first and the page no longer reads as seven identical grey boxes. */
-.hud {
-  position: relative; overflow: hidden;
-  padding: var(--s4) var(--s4) var(--s4);
-  margin-bottom: var(--s5);
+/* ── Home ─────────────────────────────────────────────────────────────────
+   Light, illustrated layout: avatar + resource pills, a big budget headline,
+   a daily bar chart, horizontally scrolling category tiles, pastel quest
+   cards, and a featured card where the mascot lives. */
+.home { padding-top: var(--s4); }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s5); }
+.avatar {
+  flex: none; width: 52px; height: 52px; border-radius: 50%; overflow: hidden;
+  background: var(--tone-ice); border: 3px solid var(--surface);
+  box-shadow: var(--shadow);
+}
+.avatar svg { width: 100%; height: 100%; display: block; }
+.topbar-greet { flex: 1; min-width: 0; }
+.topbar-month { font-size: var(--t-micro); font-weight: 700; color: var(--text-faint);
+  letter-spacing: .04em; }
+.topbar-hello { font-size: var(--t-lead); font-weight: 800; }
+.res-pills {
+  display: flex; align-items: center;
+  background: var(--surface); border-radius: 999px; box-shadow: var(--shadow);
+  padding: 6px 4px;
+}
+.res-pill {
+  display: flex; align-items: center; gap: 5px; padding: 2px 12px;
+  font-size: var(--t-body);
+}
+.res-pill + .res-pill { border-left: 1.5px solid var(--border); }
+.res-pill b { font-weight: 800; }
+
+/* Budget headline */
+.headline {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--s3); margin-bottom: var(--s4);
+}
+.headline-title { margin: 0; font-size: var(--t-title); font-weight: 800; letter-spacing: -.01em; }
+.headline-amount { font-size: var(--t-head); font-weight: 900; letter-spacing: -.02em; line-height: 1.15; }
+.headline-pct { display: flex; flex-direction: column; align-items: flex-end; }
+.headline-pct-num { font-size: 44px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+.headline-pct-num sup { font-size: .45em; margin-left: 2px; }
+.headline-pct-sub { font-size: var(--t-small); font-weight: 700; color: var(--accent); }
+
+/* Daily chart card */
+.chart-card {
+  background: var(--tone-blue); border-radius: var(--radius-lg);
+  padding: var(--s4) var(--s4) var(--s3); margin-bottom: var(--s5);
+}
+.card-h { margin: 0; font-size: var(--t-lead); font-weight: 800; }
+.pill-outline {
+  font-size: var(--t-small); font-weight: 700; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 999px; padding: 4px 12px;
+}
+.bars-wrap { margin-top: var(--s4); }
+.bars { height: 96px; display: flex; align-items: flex-end; gap: 3px; }
+.bar {
+  flex: 1; border-radius: 999px; background: var(--accent);
+  transform-origin: bottom; animation: bar-grow .6s var(--ease) both;
+}
+.bar-today { background: var(--gold); }
+.bar-future { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+@keyframes bar-grow { from { transform: scaleY(0); } }
+.bars-axis { position: relative; height: 18px; margin-top: 6px; }
+.bars-axis span {
+  position: absolute; transform: translateX(-50%);
+  font-size: var(--t-micro); font-weight: 700; color: var(--text-faint);
+}
+
+/* Section heading with count bubble */
+.block { margin-bottom: var(--s5); }
+.sec-head { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); }
+.sec-title { margin: 0; font-size: var(--t-title); font-weight: 800; letter-spacing: -.01em; }
+.count-bubble {
+  min-width: 30px; height: 30px; padding: 0 8px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-text); font-size: var(--t-body); font-weight: 800;
+}
+.sec-note { margin-left: auto; font-size: var(--t-small); font-weight: 700; color: var(--accent); }
+.card .sec-title { font-size: var(--t-lead); }
+
+/* Category tiles: horizontal scroll */
+.cat-scroll {
+  display: flex; gap: var(--s3); overflow-x: auto; padding: 2px 2px var(--s2);
+  margin: 0 -14px; padding-left: 14px; padding-right: 14px;
+  scroll-snap-type: x mandatory; scroll-padding-inline: 14px; scrollbar-width: none;
+}
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-card {
+  flex: none; width: 104px; scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: var(--s4) var(--s2) var(--s3); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--cat) 14%, var(--surface));
+  text-align: center;
+}
+.cat-card-ico { font-size: 30px; line-height: 1.1; }
+.cat-card-name { font-size: var(--t-small); font-weight: 700;
+  color: color-mix(in srgb, var(--cat) 70%, var(--text)); }
+.cat-card-amt { font-size: var(--t-body); font-weight: 800; }
+
+/* Quest cards */
+.quest-list { display: flex; flex-direction: column; gap: var(--s3); }
+.quest {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s4) var(--s3) var(--s3);
   border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  background:
-    radial-gradient(120% 70% at 50% 0%, var(--hud-glow), transparent 70%),
-    var(--surface);
-  box-shadow: var(--shadow-lift);
 }
-.hud-top {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3);
+.tone-yellow   { background: var(--tone-yellow); --q: var(--gold); }
+.tone-green    { background: var(--tone-green); --q: var(--cat-1); }
+.tone-lavender { background: var(--tone-lavender); --q: var(--cat-4); }
+.quest-medal {
+  flex: none; width: 56px; height: 56px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 26px;
+  background: color-mix(in srgb, var(--q) 85%, #fff);
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, #fff 45%, transparent);
 }
-.home-month {
-  font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--text-faint);
+.quest-main { flex: 1; min-width: 0; }
+.quest-top { display: flex; align-items: flex-start; gap: var(--s2); }
+.quest-title { flex: 1; font-size: var(--t-body); font-weight: 800; line-height: 1.25; }
+.reward-pill {
+  flex: none; font-size: var(--t-micro); font-weight: 800; padding: 3px 9px;
+  border-radius: 999px; background: var(--surface); color: var(--gold);
 }
-.home-greeting {
-  font-size: var(--t-title); font-weight: 700; letter-spacing: -.02em; margin-top: 2px;
+.quest-sub { font-size: var(--t-small); color: var(--text-dim); font-weight: 600; margin: 2px 0 6px; }
+.quest-track {
+  height: 7px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
 }
-
-/* Level as a gold medal rather than a grey dot. */
-.lv-badge {
-  flex: none; width: 52px; height: 52px; border-radius: 16px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: linear-gradient(160deg, var(--gold-soft), var(--surface-2));
-  border: 1.5px solid var(--gold);
-  box-shadow: 0 0 16px var(--gold-glow);
-  color: var(--gold); transform: rotate(-4deg);
-}
-.lv-badge-label { font-size: 9px; font-weight: 800; letter-spacing: .14em; line-height: 1; }
-.lv-badge-num { font-size: var(--t-title); font-weight: 800; line-height: 1.05; }
-
-/* Budget ring */
-.ring-wrap {
-  position: relative; width: min(220px, 64vw); aspect-ratio: 1;
-  margin: var(--s2) auto var(--s3);
-}
-.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring-track { fill: none; stroke: var(--surface-2); stroke-width: 14; }
-.ring-fill {
-  fill: none; stroke-width: 14; stroke-linecap: round;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
-  transition: stroke-dashoffset .8s var(--ease);
-  animation: ring-in 1s var(--ease) both;
-}
-.ring-over { filter: drop-shadow(0 0 6px var(--gold-glow)); }
-@keyframes ring-in { from { stroke-dashoffset: var(--ring-c); } }
-.ring-center {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; gap: 2px; padding: 0 18%;
-}
-.ring-label {
-  font-size: var(--t-micro); font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--text-faint);
-}
-.ring-value {
-  /* Sized to sit inside the ring with room for five-figure amounts. */
-  font-size: var(--t-title); font-weight: 800; letter-spacing: -.03em; line-height: 1.1;
-}
-.ring-sub { font-size: var(--t-small); color: var(--text-dim); }
-
-.hud-stats {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2);
-  margin-bottom: var(--s4);
-}
-.hud-stat {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: var(--s2) var(--s1); border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
-}
-.hud-stat-val { font-size: var(--t-body); font-weight: 700; }
-
-/* XP: a glowing gold bar, the game's "experience" colour. */
-.hud-xp { margin-bottom: var(--s4); }
-.hud-xp-row {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: var(--s2);
-}
-.hud-xp-lv { font-size: var(--t-small); font-weight: 700; color: var(--gold); }
-.glow-track {
-  height: 10px; border-radius: 999px; overflow: hidden;
-  background: var(--surface-2);
-}
-.glow-track-thin { height: 6px; }
-.glow-fill {
-  height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, var(--gold), color-mix(in srgb, var(--gold) 55%, #fff));
-  box-shadow: 0 0 10px var(--gold-glow);
+.quest-fill {
+  height: 100%; border-radius: 999px; background: var(--q, var(--gold));
   transition: width .7s var(--ease);
 }
+.quest-done .reward-pill { color: var(--cat-1); }
 
-.hud-streak {
-  padding-top: var(--s4); border-top: 1px dashed var(--border);
-  position: relative;
+/* Featured card with the mascot */
+.feature-card {
+  position: relative; overflow: hidden;
+  background: var(--tone-yellow); border-radius: var(--radius-lg);
+  padding: var(--s4); margin-bottom: var(--s5);
 }
-.hud-streak .streak-flame { animation: flicker 2.4s ease-in-out infinite; display: inline-block; }
-.hud-streak .streak-count { color: var(--flame); }
-@keyframes flicker {
-  0%, 100% { transform: scale(1) rotate(0); }
-  50%      { transform: scale(1.12) rotate(-4deg); }
+.feature-pills { display: flex; align-items: center; gap: var(--s2); }
+.mini-pill {
+  font-size: var(--t-small); font-weight: 800; padding: 5px 11px; border-radius: 999px;
+  background: var(--surface); color: var(--gold);
 }
-.freeze {
-  position: absolute; top: var(--s4); right: 0;
-  font-size: var(--t-micro); font-weight: 700; padding: 3px 8px; border-radius: 999px;
-  color: var(--text-faint); background: var(--surface-2);
+.mini-pill-ice { color: var(--cat-2); }
+.flame-btn {
+  margin-left: auto; width: 44px; height: 44px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 22px; background: var(--surface);
 }
-.freeze-ready { color: var(--cat-2); background: color-mix(in srgb, var(--cat-2) 14%, transparent); }
-
-/* ── Sections below the HUD ─────────────────────────────────────────────── */
-.block { margin-bottom: var(--s3); }
-.sec-head {
-  display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3);
+.feature-body { display: flex; align-items: center; gap: var(--s3); margin: var(--s2) 0 var(--s3); }
+.feature-mascot {
+  flex: none; width: 118px; height: 150px;
+  animation: bob 3.2s ease-in-out infinite;
 }
-.sec-ico { font-size: var(--t-lead); line-height: 1; }
-.sec-title {
-  margin: 0; flex: 1;
-  font-size: var(--t-small); font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--text-dim);
-}
-.sec-meta { font-size: var(--t-small); font-weight: 700; color: var(--text); }
-
-/* Quests read as individual mission cards with a coloured spine and a reward. */
-.quest-list { display: flex; flex-direction: column; gap: var(--s2); }
-.quest {
-  padding: var(--s3) var(--s3) var(--s3) var(--s4);
-  border-radius: var(--radius);
-  background: var(--surface); border: 1px solid var(--border);
-  border-left: 4px solid var(--gold);
-}
-.quest-title { font-size: var(--t-body); font-weight: 600; }
-.quest-xp {
-  flex: none; font-size: var(--t-micro); font-weight: 800; padding: 3px 8px;
-  border-radius: 999px; color: var(--gold); background: var(--gold-soft);
-}
-.quest-bar {
-  display: flex; align-items: center; gap: var(--s2); margin-top: var(--s2);
-}
-.quest-bar .glow-track { flex: 1; }
-.quest-done {
-  border-left-color: var(--accent);
-  background: linear-gradient(90deg, var(--accent-soft), var(--surface) 60%);
-}
-.quest-done .quest-xp { color: var(--accent); background: var(--accent-soft); }
-.quest-done .glow-fill { background: var(--accent); box-shadow: none; }
-
-/* Category rows: icon tile + bar, each in its own colour. */
-.cat-row { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
-.cat-row:last-child { margin-bottom: 0; }
-.cat-row-ico {
-  flex: none; width: 36px; height: 36px; display: grid; place-items: center;
-  border-radius: 10px; font-size: var(--t-lead);
-  background: color-mix(in srgb, var(--cat) 16%, transparent);
-}
-.cat-row-main { flex: 1; min-width: 0; }
-.cat-bar {
-  height: 6px; border-radius: 999px; margin-top: var(--s1);
-  background: var(--surface-2); overflow: hidden;
-}
-.cat-bar-fill {
-  height: 100%; border-radius: 999px; background: var(--cat);
-  transition: width .6s var(--ease);
-}
+@keyframes bob { 50% { transform: translateY(-4px); } }
+.feature-text { flex: 1; min-width: 0; }
+.feature-kicker { font-size: var(--t-small); font-weight: 800; color: var(--flame); }
+.feature-title { font-size: var(--t-head); font-weight: 900; line-height: 1.1; letter-spacing: -.02em; margin: 2px 0 4px; }
+.feature-sub { font-size: var(--t-small); font-weight: 600; color: var(--text-dim); margin-bottom: 8px; }
+.feature-track { --q: var(--gold); background: var(--surface); }
+.feature-card .streak-dot { border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
+.feature-card .streak-dot.on { background: var(--flame); border-color: var(--flame); }
+.feature-card .streak-dot.today { box-shadow: 0 0 0 2px var(--tone-yellow), 0 0 0 3.5px var(--flame); }
 
 .care-note { margin: calc(var(--s2) * -1) 0 var(--s3); }
 .care-row { margin-bottom: var(--s2); }
 
 /* Badges: earned ones shine, locked ones wait in silhouette. */
+.badge { border-radius: var(--radius); }
 .badge-owned {
-  background: linear-gradient(160deg, var(--gold-soft), var(--surface-2));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 45%, transparent),
-              0 0 12px var(--gold-glow);
+  background: var(--tone-yellow);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--gold) 45%, transparent);
 }
-.badge-owned .badge-ico { filter: drop-shadow(0 0 4px var(--gold-glow)); }
+
+/* Cards are borderless white with a soft shadow in this style. */
+.card { border: none; border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+
+/* Celebration: mascot pops up with the milestone icon. */
+.celebrate-hero { position: relative; width: 120px; height: 140px; margin: 0 auto; }
+.celebrate-mascot { width: 100%; height: 100%; }
+.celebrate-hero .celebrate-ico {
+  position: absolute; right: -14px; top: -4px; font-size: 36px;
+  animation: pop-in .5s var(--ease-pop) .15s both;
+}
+
+.auth-mascot { width: 92px; height: 112px; display: block; margin: 0 auto; }
+
+/* ── Theme picker ───────────────────────────────────────────────────────── */
+.theme-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); margin-top: var(--s3); }
+.theme-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: var(--s3) 4px var(--s2); border-radius: var(--radius);
+  background: var(--surface-2); border: 2px solid transparent;
+  font-size: var(--t-small); font-weight: 700; color: var(--text-dim);
+  transition: border-color .15s, transform .12s var(--ease-pop);
+}
+.theme-opt:active { transform: scale(.95); }
+.theme-opt[aria-checked="true"] { border-color: var(--accent); color: var(--text); }
+.theme-swatch { display: flex; }
+.theme-swatch i {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--surface); margin-left: -5px;
+}
+.theme-swatch i:first-child { margin-left: 0; }
+.theme-ico { font-size: 20px; line-height: 1; }

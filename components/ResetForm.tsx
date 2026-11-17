@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Mascot from './Mascot';
 
 /** Landing page for the emailed reset link. */
 export default function ResetForm({ token }: { token: string }) {
@@ -47,7 +48,7 @@ export default function ResetForm({ token }: { token: string }) {
     <div className="app" style={{ paddingBottom: 0, justifyContent: 'center' }}>
       <div className="screen" style={{ flex: 'none' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 46, lineHeight: 1 }}>🪙</div>
+          <Mascot mood="cheer" className="auth-mascot" />
           <h1 style={{ fontSize: 24, margin: '12px 0 0', letterSpacing: '-.02em' }}>
             Choose a new password
           </h1>

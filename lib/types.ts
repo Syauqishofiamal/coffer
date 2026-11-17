@@ -36,6 +36,8 @@ export interface AppState {
   noSpendToday: boolean;
   todayExpenses: Expense[];
   byCategory: { category: string; subtype: string | null; total: number; n: number }[];
+  /** Budgeted spending per day this month (days with no spending are absent). */
+  daily: { date: string; total: number }[];
   /** Off-budget spending (Health), tracked and exported separately. */
   care: {
     total: number;

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Mascot from './Mascot';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -73,7 +74,7 @@ export default function LoginForm() {
     <div className="app" style={{ paddingBottom: 0, justifyContent: 'center' }}>
       <div className="screen" style={{ flex: 'none' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 46, lineHeight: 1 }}>🪙</div>
+          <Mascot mood="cheer" className="auth-mascot" />
           <h1 style={{ fontSize: 28, margin: '12px 0 4px', letterSpacing: '-.02em' }}>Coffer</h1>
           <p className="muted small" style={{ margin: 0 }}>
             Log an expense in under five seconds.

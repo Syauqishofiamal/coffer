@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES, CATEGORY_MAP } from '@/lib/constants';
 import { formatMoney } from '@/lib/dates';
 import type { AppState } from '@/lib/types';
+import { THEMES, getThemeChoice, setThemeChoice, type ThemeChoice } from '@/lib/theme';
 
 export default function More({
   state, onRefresh, onQuickLog,
@@ -15,6 +16,13 @@ export default function More({
   const [budget, setBudget] = useState(String(state.settings.monthlyBudget));
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState('');
+  const [theme, setTheme] = useState<ThemeChoice>('penguin');
+  useEffect(() => { setTheme(getThemeChoice()); }, []);
+
+  function pickTheme(t: ThemeChoice) {
+    setTheme(t);
+    setThemeChoice(t);
+  }
 
   async function saveBudget() {
     setSaving(true);
@@ -92,6 +100,23 @@ export default function More({
         </div>
         {savedMsg && <p className="tiny" style={{ color: 'var(--accent)' }}>{savedMsg}</p>}
 
+      </div>
+
+      {/* ── Appearance ── */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div className="screen-title" style={{ margin: 0 }}>Theme</div>
+        <div className="theme-grid" role="radiogroup" aria-label="Theme">
+          {THEMES.map((t) => (
+            <button key={t.id} type="button" role="radio" aria-checked={theme === t.id}
+                    className="theme-opt" onClick={() => pickTheme(t.id)}>
+              <span className="theme-ico" aria-hidden>{t.icon}</span>
+              <span className="theme-swatch" aria-hidden>
+                {t.swatch.map((c) => <i key={c} style={{ background: c }} />)}
+              </span>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Preferences ── */}

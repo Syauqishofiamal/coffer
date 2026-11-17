@@ -11,11 +11,19 @@ import type { AppState, Expense, LogResponse } from '@/lib/types';
 
 type Tab = 'add' | 'today' | 'history' | 'more';
 
-const TABS: { id: Tab; icon: string; label: string }[] = [
-  { id: 'today',   icon: '🏠', label: 'Home' },
-  { id: 'add',     icon: '➕', label: 'Add' },
-  { id: 'history', icon: '📋', label: 'History' },
-  { id: 'more',    icon: '⚙️', label: 'Settings' },
+/** Line icons (24px, stroke = currentColor) for the bottom bar. */
+const ICONS: Record<Tab, React.ReactNode> = {
+  today: <path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z" />,
+  add: <><circle cx="12" cy="12" r="8" /><path d="M12 8.5v7M8.5 12h7" /></>,
+  history: <><rect x="5" y="4" width="14" height="16" rx="2.5" /><path d="M9 9h6M9 13h6M9 17h3" /></>,
+  more: <><circle cx="12" cy="12" r="3" /><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M6 18l1.6-1.6M16.4 7.6 18 6" /></>,
+};
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'today',   label: 'Home' },
+  { id: 'add',     label: 'Add' },
+  { id: 'history', label: 'History' },
+  { id: 'more',    label: 'Settings' },
 ];
 
 export default function AppShell({ isDemo }: { isDemo: boolean }) {
@@ -201,9 +209,8 @@ export default function AppShell({ isDemo }: { isDemo: boolean }) {
         <div className="tabs-inner">
           {TABS.map((t) => (
             <button key={t.id} className="tab" onClick={() => setTab(t.id)}
-                    aria-current={tab === t.id ? 'page' : undefined}>
-              <span className="tab-ico" aria-hidden>{t.icon}</span>
-              {t.label}
+                    aria-label={t.label} aria-current={tab === t.id ? 'page' : undefined}>
+              <svg className="tab-ico" viewBox="0 0 24 24" aria-hidden>{ICONS[t.id]}</svg>
             </button>
           ))}
         </div>
