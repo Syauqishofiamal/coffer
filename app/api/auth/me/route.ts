@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, createSession } from '@/lib/auth';
 import { findById, toAccount, changePassword, verifyLogin } from '@/lib/accounts';
 
 export async function GET() {
@@ -36,5 +36,8 @@ export async function PATCH(req: Request) {
 
   const result = await changePassword(session.userId, next);
   if (!result.ok) return NextResponse.json({ error: result.reason }, { status: 400 });
+  // The new password signs out every other device; re-issue this one's session
+  // so the person making the change stays signed in here.
+  await createSession(session.userId, false);
   return NextResponse.json({ ok: true });
 }
