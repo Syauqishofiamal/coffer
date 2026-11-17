@@ -1,126 +1,179 @@
-# Product Spec: Coffer, a Gamified Personal Budget Tracker
+# Coffer: Product Spec
+
+A gamified personal expense tracker.
 
 ## Goal
 
-A personal expense tracker optimised for two things above all else: **speed of
-logging an expense** (target: under 5 seconds, 3 taps) and **making the user
-want to come back tomorrow**. Everything else is secondary.
+Coffer is built around two goals, in this order:
 
-## Context
-- Target Audience: Me (secure personal use) and Recruiters (interactive demo mode).
-- Deployment: Cloud-hosted and continuously deployed from GitHub (e.g., Vercel or Render).
-- Devices: Accessible from any web browser, but strictly optimized for mobile phone use (large tap targets, thumb-reachable controls).
-- Currency: [MYR / USD / ...] | Locale: [e.g. Asia/Kuala_Lumpur].
+1. **Logging is fast.** Recording an expense takes under 5 seconds and 3 taps.
+2. **Users come back.** The app should make someone want to open it again tomorrow.
 
-## Non-negotiable constraints
-1. **Cloud Persistence:** Use PostgreSQL (via Supabase or Neon). Ship the database schema setup and environment variable instructions.
-2. **Authentication & Demo Mode:** Implement a secure login for me. Crucially, include a "Try Demo" button on the login screen that logs visitors into a temporary, isolated session pre-filled with realistic sample data so they can test the UX without ruining my database.
-3. **Deployability:** The project must be structured for immediate cloud deployment. Include any necessary build configurations (e.g., `package.json` scripts, `vercel.json`, or a `Dockerfile`) and a robust `README.md`.
-4. **Frictionless UX:** Despite being cloud-hosted, the app must feel local. Use optimistic UI updates so logging an expense never waits for a server response.
+Every other decision is judged against these two.
 
-## Data model
+## Audience and platform
 
-Table `expenses`:
+- **Users:** the owner, for real personal budgeting, and visitors (such as
+  recruiters) trying the app through a demo mode.
+- **Platform:** a web app, designed mobile-first. Large tap targets and
+  thumb-reachable controls, while still usable on a laptop.
+- **Hosting:** deployed to the cloud and redeployed automatically on every push.
+- **Currency and locale:** configurable, defaulting to MYR and
+  Asia/Kuala_Lumpur.
 
-| field | notes |
+## Requirements
+
+1. **Cloud database.** Data is stored in PostgreSQL (Neon or Supabase). The
+   repo includes the schema and setup instructions.
+2. **Login and demo mode.** The owner signs in securely. The login screen also
+   has a **Try the demo** button that opens an isolated account filled with
+   realistic sample data, so visitors can explore without touching real data.
+3. **Easy deployment.** The project deploys to a cloud host with no manual
+   steps beyond setting environment variables, and the README explains how.
+4. **Feels instant.** Saving never waits on the server. The UI updates
+   optimistically and syncs in the background.
+
+## Data
+
+Each expense records:
+
+| Field | Notes |
 |---|---|
-| `id` | primary key |
-| `date` | defaults to today |
-| `category` | one of the presets below, or `custom` |
-| `custom_label` | free text, only when category is `custom` |
-| `subtype` | optional; used by Food → `delivery` \| `cooked` |
-| `amount` | decimal, 2 places |
-| `note` | optional free text, always available |
-| `created_at` | timestamp, for streak logic |
+| `id` | Primary key |
+| `date` | Defaults to today |
+| `category` | One of the preset categories, or `custom` |
+| `custom_label` | Free text, only for custom expenses |
+| `subtype` | Optional. Food is split into `delivery` and `cooked` |
+| `amount` | Decimal, 2 places |
+| `note` | Optional free text |
+| `created_at` | Timestamp, used for streaks |
 
-Preset categories: **Transport, Food, Groceries, Rent, WiFi, Water bill, Electric bill**, plus **Other/Custom**.
+**Preset categories:** Transport, Food, Groceries, Rent, WiFi, Water, Electric,
+and Other (custom label).
 
-Also persist: user settings (monthly budget, currency), XP total, streak state, unlocked badges. Recurring bills (rent, wifi, water, electric) should be creatable as templates I can log with one tap, since the amount is usually the same each month — pre-fill last month's amount and let me edit it.
+The app also stores user settings (monthly budget, currency), XP, streak state
+and unlocked badges.
+
+**Recurring bills** (rent, WiFi, water, electric) can be saved as templates and
+logged with one tap, since the amount is usually the same each month. Last
+month's amount is pre-filled and can be edited before saving.
 
 ## Screens
 
-**1. Home / Quick Add** (the default screen — this is 90% of usage)
-- Date selector at top, **pre-set to today**, with one-tap "Yesterday" and a date picker for anything older.
-- Category grid: large icon tiles, one tap to select. Food expands inline to Delivery / Cooked.
-- "Other" tile opens a text field for a custom label.
-- Numeric keypad for the amount, big digits, with a visible Save button. Optional note field, collapsed by default.
-- **Remembered amounts.** Once a category is selected, show up to 3 chips of my most recent distinct amounts for that category, most recent first. Tapping a chip **loads the value into the keypad — it does not save.** I can then edit the trailing digits and hit Save myself. Never one-tap-commit an amount; a wrong saved number is worse than a saved keystroke.
-  - Stable categories (Transport, Rent, WiFi, Water, Electric, Groceries) get the full chip row — these repeat almost exactly.
-  - **Food → Delivery is the exception:** the total shifts by a few cents or ringgit every order (fees, promos, different items), so a remembered amount is a starting point at best. For Delivery, show a single chip labelled with the last amount and a `~` prefix to signal "edit me," and keep the keypad focused and ready for input. Do not show three chips there — it implies a precision that doesn't exist and invites me to save a stale number.
-  - Food → Cooked behaves like a stable category.
-- Save → instant feedback (below) → form resets to ready state for the next entry. Never make me navigate back.
+### 1. Quick Add (home, about 90% of use)
 
-**2. Today / This Month dashboard**
-- Remaining budget shown as the main visual (see gamification).
-- Today's entries as a list, each swipe-or-tap to edit/delete. Edit and delete must exist — I will fumble an amount.
-- Simple category breakdown for the current month.
+- A date selector, set to today, with a one-tap **Yesterday** option and a date
+  picker for older days.
+- A grid of large category tiles. Food expands inline into Delivery and Cooked.
+  **Other** opens a field for a custom label.
+- A numeric keypad with large digits, a clear Save button, and an optional note
+  field that stays collapsed until needed.
+- **Remembered amounts.** After choosing a category, the app suggests up to 3
+  recent amounts as chips. Tapping a chip **fills the keypad but does not
+  save**, so the amount can be adjusted first. A wrong amount saved is worse
+  than one extra tap.
+  - Stable categories (Transport, Rent, WiFi, Water, Electric, Groceries,
+    Food → Cooked) show the full row of chips, because their amounts repeat.
+  - **Food → Delivery** shows a single chip marked `~` (approximate). Delivery
+    totals change every order with fees and promos, so the last amount is only
+    a starting point.
+- After saving, feedback appears and the form resets, ready for the next
+  entry. No navigating back.
 
-**3. History**
-- Filter by month and category. Running totals. Nothing fancy.
+### 2. Dashboard
 
-**4. Export**
-- One button → downloads `.xlsx`, one button → `.csv`.
-- XLSX: columns `Date | Category | Subtype | Custom Label | Amount | Note`. One sheet per month, plus a `Summary` sheet with category totals per month. Freeze the header row, format the amount column as currency, autofit column widths.
-- Export must reflect a live query of the DB, not a cached copy.
+- The remaining budget is the main visual (see Gamification).
+- Today's entries, each editable and deletable.
+- A breakdown of this month's spending by category.
 
-## Gamification system
+### 3. History
 
-Design it as **encouragement, never punishment.** Concretely:
+- Filter by month and category, with running totals.
 
-- **XP for the act of logging**, not for spending little. +10 XP per entry, +25 bonus for logging every category-day complete. This is the core loop: I get rewarded for honesty, so I never have an incentive to hide a bad purchase.
-- **Streak** = consecutive days I opened the app and logged *or* explicitly tapped "No spending today" (make that a first-class button). Show a flame/counter. Include **one streak freeze per month** that auto-applies to a missed day, so a single slip doesn't wipe a 40-day streak.
-- **Levels** from cumulative XP, with a visible progress bar that animates on gain.
-- **Budget as a resource bar**, not a debt counter. Show remaining budget filling/draining like an HP or fuel gauge. When I go over, the framing is "over by X — here's what next month looks like," never red-alert shaming.
-- **Weekly quests**, 2–3 at a time, generated from my own data. Examples: "Log 5 days this week," "Cook 3 meals instead of ordering," "Keep transport under [X]." Completing one grants XP + a badge.
-- **Badges** for milestones: first entry, 7-day streak, 30-day streak, first month fully logged, first month under budget, 100 entries.
+### 4. Export
 
-**Anti-patterns — do not implement:** loss of XP for overspending, guilt-toned copy, aggressive red UI, notifications that nag, leaderboards, anything that punishes a missed day.
+- Download as `.xlsx` or `.csv`.
+- The Excel file has one sheet per month plus a **Summary** sheet with
+  category totals per month. Columns: Date, Category, Subtype, Custom Label,
+  Amount, Note. The header row is frozen, amounts are formatted as currency,
+  and columns are sized to fit.
+- Exports always come from live data, never a cached copy.
 
-## Instant feedback
+## Gamification
 
-- Feedback must appear **under 300ms** of tapping Save — optimistic UI, don't wait for the server round-trip.
-- A toast/card animates in showing: amount logged, XP gained, and a short positive line.
-- **The toast carries an Undo button and stays up for ~5 seconds.** Undo removes the entry outright and rolls back any XP, streak, or badge state it triggered — as if it never happened. This is the primary correction path for a fat-fingered amount; the edit screen is the fallback for mistakes I notice later. Undo must not itself count as activity for streak purposes.
-- **Vary the copy.** Write a pool of at least 20 messages and rotate without immediate repeats, so it doesn't feel robotic by day three. Tone: warm, brief, a little playful. Examples of the register I want: "Logged. That's 6 days running." / "Nice — tracked before you forgot." / "+10 XP. Your future self says thanks."
-- Milestone moments (level up, badge unlock, streak multiple of 7) get a bigger celebration: confetti or a scale-in card, plus a distinct message. Keep it under 2 seconds and dismissible.
-- Optional subtle haptic (`navigator.vibrate`) and an audio toggle, both off by default and easy to disable.
-- Respect `prefers-reduced-motion`.
+The principle is **encouragement, never punishment.**
 
-## Definition of done
+- **XP for logging, not for spending less.** +10 XP per entry, +25 for the
+  first entry of the day or for marking a no-spend day, +50 per completed quest
+  and +40 per badge. Users are rewarded for being honest, so there's never a
+  reason to hide a purchase.
+- **Streaks** count consecutive days with at least one entry, or a tap on
+  **No spending today**. One **streak freeze** per month covers a missed day
+  automatically, so a single slip doesn't wipe out a long streak.
+- **Levels** based on total XP, with a progress bar that animates on every gain.
+- **Budget as a resource bar.** Remaining budget drains like a health or fuel
+  gauge. Going over is shown calmly ("over by X, resets next month"), never as
+  a red alarm.
+- **Weekly quests,** 2–3 at a time, based on the user's own habits. For
+  example: "Log on 5 days this week" or "Cook 3 meals instead of ordering".
+  Completing one earns XP.
+- **Badges** for milestones: first entry, 7-day and 30-day streaks, first month
+  fully logged, first month under budget, 100 entries.
 
-The build is done when all of these hold:
+**Deliberately left out:** losing XP for overspending, guilt-tripping copy,
+alarming red UI, nagging notifications, leaderboards, and anything that
+punishes a missed day.
 
-1. Fresh clone → install → one command → app is reachable in a browser.
-2. I can log a Transport expense in 3 taps with today's date, without typing anything except the amount.
-3. I can log something that fits no preset category, with my own label and an amount.
-4. I can edit and delete an entry.
-5. Saving an entry then hitting Undo leaves the database, XP total, and streak exactly as they were before the save.
-6. Selecting Transport shows my recent amounts as chips; tapping one fills the keypad without saving, and I can change the last two digits before saving. Selecting Food → Delivery shows a single `~` chip instead.
-7. Killing the server and restarting preserves all data, XP, streak, and badges.
-8. Export produces an `.xlsx` that opens cleanly in Excel/LibreOffice/Google Sheets with correct totals.
-9. Streak increments correctly across a date boundary, and the freeze works for exactly one missed day per month.
-10. Usable one-handed on a 390px-wide phone screen.
+## Feedback after saving
 
-## Delivery plan
+- Feedback appears **within 300 ms** of tapping Save.
+- A toast shows the amount, XP earned, and a short encouraging message.
+- The toast has an **Undo** button for about 5 seconds. Undo removes the entry
+  and reverses any XP, streak or badge change, as if it never happened. Undoing
+  does not count as activity for the streak.
+- Messages rotate through a pool of 20+ lines so they don't repeat. The tone is
+  warm, brief and a little playful, for example "Logged. That's 6 days
+  running."
+- Milestones (level up, new badge, every 7-day streak) get a bigger celebration
+  that lasts under 2 seconds and can be dismissed.
+- Optional haptics and sound, both off by default.
+- Animations respect the device's reduced-motion setting.
 
-Build in phases, each working end to end before the next starts:
+## Acceptance criteria
 
-- **Phase 1:** data layer + quick-add + list view + edit/delete. Ugly is fine.
-- **Phase 2:** export to CSV/XLSX.
-- **Phase 3:** XP, streaks, levels, badges, quests.
-- **Phase 4:** animation, feedback copy, visual polish.
+1. A fresh clone runs with one install step and one command.
+2. A Transport expense for today can be logged in 3 taps, typing only the
+   amount.
+3. An expense outside the preset categories can be logged with a custom label.
+4. Entries can be edited and deleted.
+5. Saving and then undoing leaves the data, XP and streak exactly as before.
+6. Choosing Transport shows recent amounts as chips. Tapping one fills the
+   keypad without saving. Food → Delivery shows a single `~` chip instead.
+7. All data, XP, streaks and badges survive a server restart.
+8. The `.xlsx` export opens correctly in Excel, LibreOffice and Google Sheets,
+   with correct totals.
+9. Streaks roll over correctly at midnight, and the freeze covers exactly one
+   missed day per month.
+10. The app is usable one-handed on a 390px-wide phone screen.
 
-Keep files small (under ~400 lines), comment the gamification math (XP curve,
-level thresholds, streak rules) so the numbers can be tuned later, and keep the
-README current: how to run, where the data lives, how to back it up, how to
-change the budget.
+## Build plan
 
----
+Each phase works end to end before the next begins:
 
-## Open questions to answer before Phase 1
+1. **Core:** data layer, quick add, list view, edit and delete.
+2. **Export:** CSV and Excel.
+3. **Game layer:** XP, streaks, levels, badges, quests.
+4. **Polish:** animation, feedback messages, visual design.
+
+The gamification numbers (XP values, level thresholds, streak rules) are
+commented in the code so they can be tuned later.
+
+## Open questions
 
 Answered in [DECISIONS.md](DECISIONS.md):
 
-1. Is SQLite + a thin Python server the right call here, or would a different setup meaningfully reduce friction for a single-user localhost app?
-2. Should recurring bills auto-log on a schedule, or always require my tap to confirm?
-3. What's the most likely reason I abandon this app in week three, and what one feature would prevent it?
+1. What's the right stack: a lightweight local setup, or a hosted database?
+2. Should recurring bills log themselves automatically, or always need a tap
+   to confirm?
+3. What's the most likely reason someone stops using the app in week three,
+   and what one feature would prevent it?

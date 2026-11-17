@@ -7,10 +7,10 @@ calls made along the way.
 
 ## 1. Is SQLite + a thin Python server the right call?
 
-**No — and the brief overtook itself here.** The title says localhost, but the
-Context and Non-negotiable sections say cloud-hosted Postgres on Vercel with a
-public demo for recruiters. Those cannot both be true. I built the cloud
-version, because a portfolio piece nobody can click is not a portfolio piece.
+**No.** A local setup would be simpler, but the requirements call for
+cloud-hosted Postgres with a public demo for recruiters, and a localhost app
+cannot offer that. I built the cloud version, because a portfolio piece nobody
+can click is not a portfolio piece.
 
 That decision forces the rest. Python plus `openpyxl` on Vercel means cold
 starts measured in seconds on a platform whose Python support is a second-class
@@ -24,8 +24,8 @@ answer — one file, no daemon, trivial backup. It stopped being the right answe
 the moment "recruiters can try it" entered the requirements.
 
 **Export uses ExcelJS, not `openpyxl`.** Beyond the language change, the
-JavaScript package the brief's approach maps onto (`xlsx` on npm) currently ships
-unpatched prototype-pollution and ReDoS advisories with no fix available.
+obvious JavaScript alternative (`xlsx` on npm) currently ships unpatched
+prototype-pollution and ReDoS advisories with no fix available.
 ExcelJS is maintained and does everything asked: one sheet per month, a Summary
 sheet, frozen headers, currency formatting, autofit widths.
 
@@ -84,10 +84,9 @@ that ends the habit.
 
 ## Assumptions made without asking
 
-- **Currency and locale.** The brief left these bracketed. I used **MYR** and
-  **Asia/Kuala_Lumpur**, since its own example copy refers to "a few cents or
-  ringgit". Both are editable, and the timezone genuinely matters: it decides
-  when your day rolls over for streak purposes.
+- **Currency and locale.** I defaulted to **MYR** and **Asia/Kuala_Lumpur**.
+  Both are editable, and the timezone genuinely matters: it decides when your
+  day rolls over for streak purposes.
 - **Demo isolation.** One shared demo account rather than per-visitor sandboxes,
   as chosen during the build. Since visitors leave junk behind, a nightly cron
   reseeds it.
