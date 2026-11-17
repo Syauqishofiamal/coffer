@@ -21,6 +21,19 @@
   --gold-soft:   #241d0c;
   --flame:       #ff7b52;   /* streak */
 
+  /* ── Game HUD ─────────────────────────────────────────────────────────────
+     The home screen is a game HUD: a glowing hero panel, a budget ring, and one
+     colour per spending category so the breakdown is readable at a glance. */
+  --ring-end:  #2dd4bf;   /* budget ring fades green → teal */
+  --hud-glow:  rgba(110, 231, 135, .14);
+  --gold-glow: rgba(227, 179, 65, .45);
+  --cat-1: #6ee787;  /* green  */
+  --cat-2: #60a5fa;  /* blue   */
+  --cat-3: #e3b341;  /* gold   */
+  --cat-4: #c084fc;  /* violet */
+  --cat-5: #ff7b52;  /* coral  */
+  --cat-6: #2dd4bf;  /* teal   */
+
   --radius: 14px;
   --radius-lg: 20px;
   --shadow: 0 1px 2px rgba(0,0,0,.5);
@@ -78,6 +91,15 @@
   --gold:        #b8873b;
   --gold-soft:   #f5ebd8;
   --flame:       #c4622d;
+  --ring-end:  #0f9488;
+  --hud-glow:  rgba(47, 158, 81, .10);
+  --gold-glow: rgba(184, 135, 59, .30);
+  --cat-1: #2f9e51;
+  --cat-2: #2f6fd1;
+  --cat-3: #b8873b;
+  --cat-4: #8b4fd0;
+  --cat-5: #c4622d;
+  --cat-6: #0f9488;
   --shadow: 0 1px 2px rgba(28,26,23,.05), 0 4px 16px rgba(28,26,23,.05);
   --shadow-lift: 0 4px 12px rgba(28,26,23,.10), 0 12px 32px rgba(28,26,23,.10);
 }

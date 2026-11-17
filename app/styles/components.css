@@ -136,15 +136,6 @@
 .btn-soft { background: var(--accent-soft); color: var(--accent); }
 
 /* ── Gauges & bars ──────────────────────────────────────────────────────── */
-.gauge-track {
-  height: 14px; border-radius: 999px; background: var(--surface-2);
-  overflow: hidden; border: 1px solid var(--border);
-}
-.gauge-fill {
-  height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--gold)));
-  transition: width .6s cubic-bezier(.2,.8,.2,1);
-}
 .xp-track { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .xp-fill {
   height: 100%; border-radius: 999px; background: var(--gold);
@@ -388,10 +379,6 @@
 .auth-links button:active { color: var(--accent); }
 
 /* ── Home header ────────────────────────────────────────────────────────── */
-.home-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 12px; margin-bottom: 14px;
-}
 .home-month {
   font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em;
   text-transform: uppercase; color: var(--text-faint);
@@ -399,17 +386,7 @@
 .home-greeting {
   font-size: var(--t-head); font-weight: 700; letter-spacing: -.02em; margin-top: 2px;
 }
-.level-dot {
-  flex: none; width: 46px; height: 46px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  color: var(--accent); font-weight: 700; font-size: var(--t-body);
-  font-family: var(--mono);
-}
 
-/* Level and streak sit side by side under the budget card. */
-.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 
 /* ── Toggle switch ──────────────────────────────────────────────────────── */
 .switch {
@@ -589,6 +566,184 @@ a.btn, a.btn-ghost { text-decoration: none; }
   100% { transform: scale(1); }
 }
 
-/* The streak strip needs the full width for seven legible dots, so this pair
-   stacks instead of sitting side by side. */
-.duo-stack { grid-template-columns: 1fr; }
+
+/* ── Home: game HUD ─────────────────────────────────────────────────────────
+   The top panel is the screen's one hero: a glowing card holding the budget
+   ring, XP and streak. Everything below it is quieter, so the eye lands here
+   first and the page no longer reads as seven identical grey boxes. */
+.hud {
+  position: relative; overflow: hidden;
+  padding: var(--s4) var(--s4) var(--s4);
+  margin-bottom: var(--s5);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background:
+    radial-gradient(120% 70% at 50% 0%, var(--hud-glow), transparent 70%),
+    var(--surface);
+  box-shadow: var(--shadow-lift);
+}
+.hud-top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3);
+}
+.home-month {
+  font-size: var(--t-micro); font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.home-greeting {
+  font-size: var(--t-title); font-weight: 700; letter-spacing: -.02em; margin-top: 2px;
+}
+
+/* Level as a gold medal rather than a grey dot. */
+.lv-badge {
+  flex: none; width: 52px; height: 52px; border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, var(--gold-soft), var(--surface-2));
+  border: 1.5px solid var(--gold);
+  box-shadow: 0 0 16px var(--gold-glow);
+  color: var(--gold); transform: rotate(-4deg);
+}
+.lv-badge-label { font-size: 9px; font-weight: 800; letter-spacing: .14em; line-height: 1; }
+.lv-badge-num { font-size: var(--t-title); font-weight: 800; line-height: 1.05; }
+
+/* Budget ring */
+.ring-wrap {
+  position: relative; width: min(220px, 64vw); aspect-ratio: 1;
+  margin: var(--s2) auto var(--s3);
+}
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--surface-2); stroke-width: 14; }
+.ring-fill {
+  fill: none; stroke-width: 14; stroke-linecap: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
+  transition: stroke-dashoffset .8s var(--ease);
+  animation: ring-in 1s var(--ease) both;
+}
+.ring-over { filter: drop-shadow(0 0 6px var(--gold-glow)); }
+@keyframes ring-in { from { stroke-dashoffset: var(--ring-c); } }
+.ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 2px; padding: 0 18%;
+}
+.ring-label {
+  font-size: var(--t-micro); font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.ring-value {
+  /* Sized to sit inside the ring with room for five-figure amounts. */
+  font-size: var(--t-title); font-weight: 800; letter-spacing: -.03em; line-height: 1.1;
+}
+.ring-sub { font-size: var(--t-small); color: var(--text-dim); }
+
+.hud-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+.hud-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s2) var(--s1); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+}
+.hud-stat-val { font-size: var(--t-body); font-weight: 700; }
+
+/* XP: a glowing gold bar, the game's "experience" colour. */
+.hud-xp { margin-bottom: var(--s4); }
+.hud-xp-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: var(--s2);
+}
+.hud-xp-lv { font-size: var(--t-small); font-weight: 700; color: var(--gold); }
+.glow-track {
+  height: 10px; border-radius: 999px; overflow: hidden;
+  background: var(--surface-2);
+}
+.glow-track-thin { height: 6px; }
+.glow-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold), color-mix(in srgb, var(--gold) 55%, #fff));
+  box-shadow: 0 0 10px var(--gold-glow);
+  transition: width .7s var(--ease);
+}
+
+.hud-streak {
+  padding-top: var(--s4); border-top: 1px dashed var(--border);
+  position: relative;
+}
+.hud-streak .streak-flame { animation: flicker 2.4s ease-in-out infinite; display: inline-block; }
+.hud-streak .streak-count { color: var(--flame); }
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50%      { transform: scale(1.12) rotate(-4deg); }
+}
+.freeze {
+  position: absolute; top: var(--s4); right: 0;
+  font-size: var(--t-micro); font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  color: var(--text-faint); background: var(--surface-2);
+}
+.freeze-ready { color: var(--cat-2); background: color-mix(in srgb, var(--cat-2) 14%, transparent); }
+
+/* ── Sections below the HUD ─────────────────────────────────────────────── */
+.block { margin-bottom: var(--s3); }
+.sec-head {
+  display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3);
+}
+.sec-ico { font-size: var(--t-lead); line-height: 1; }
+.sec-title {
+  margin: 0; flex: 1;
+  font-size: var(--t-small); font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.sec-meta { font-size: var(--t-small); font-weight: 700; color: var(--text); }
+
+/* Quests read as individual mission cards with a coloured spine and a reward. */
+.quest-list { display: flex; flex-direction: column; gap: var(--s2); }
+.quest {
+  padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 4px solid var(--gold);
+}
+.quest-title { font-size: var(--t-body); font-weight: 600; }
+.quest-xp {
+  flex: none; font-size: var(--t-micro); font-weight: 800; padding: 3px 8px;
+  border-radius: 999px; color: var(--gold); background: var(--gold-soft);
+}
+.quest-bar {
+  display: flex; align-items: center; gap: var(--s2); margin-top: var(--s2);
+}
+.quest-bar .glow-track { flex: 1; }
+.quest-done {
+  border-left-color: var(--accent);
+  background: linear-gradient(90deg, var(--accent-soft), var(--surface) 60%);
+}
+.quest-done .quest-xp { color: var(--accent); background: var(--accent-soft); }
+.quest-done .glow-fill { background: var(--accent); box-shadow: none; }
+
+/* Category rows: icon tile + bar, each in its own colour. */
+.cat-row { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
+.cat-row:last-child { margin-bottom: 0; }
+.cat-row-ico {
+  flex: none; width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 10px; font-size: var(--t-lead);
+  background: color-mix(in srgb, var(--cat) 16%, transparent);
+}
+.cat-row-main { flex: 1; min-width: 0; }
+.cat-bar {
+  height: 6px; border-radius: 999px; margin-top: var(--s1);
+  background: var(--surface-2); overflow: hidden;
+}
+.cat-bar-fill {
+  height: 100%; border-radius: 999px; background: var(--cat);
+  transition: width .6s var(--ease);
+}
+
+.care-note { margin: calc(var(--s2) * -1) 0 var(--s3); }
+.care-row { margin-bottom: var(--s2); }
+
+/* Badges: earned ones shine, locked ones wait in silhouette. */
+.badge-owned {
+  background: linear-gradient(160deg, var(--gold-soft), var(--surface-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 45%, transparent),
+              0 0 12px var(--gold-glow);
+}
+.badge-owned .badge-ico { filter: drop-shadow(0 0 4px var(--gold-glow)); }

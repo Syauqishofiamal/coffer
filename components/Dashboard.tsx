@@ -1,6 +1,8 @@
 'use client';
+import { useId } from 'react';
 import { CATEGORY_MAP, CARE_SUBTYPES } from '@/lib/constants';
 import { BADGES } from '@/lib/badges';
+import { XP_QUEST_COMPLETE } from '@/lib/gamification';
 import { formatMoney } from '@/lib/dates';
 import EntryList from './EntryList';
 import StreakStrip from './StreakStrip';
@@ -14,6 +16,60 @@ function greeting(): string {
   return 'Good evening';
 }
 
+/**
+ * The budget as a ring that drains as you spend: a resource meter, like a
+ * health or mana bar, never a debt counter. Over budget the ring simply sits
+ * full in gold — calm, not an alarm.
+ */
+function BudgetRing({ fraction, over, children }: {
+  fraction: number; over: boolean; children: React.ReactNode;
+}) {
+  // useId() contains ':' or '«»', which break SVG url(#…) references.
+  const gradId = `ring-${useId().replace(/[^\w-]/g, '')}`;
+  const R = 84;
+  const C = 2 * Math.PI * R;
+  // `fraction` is the share of the budget still LEFT, so the ring shrinks as
+  // money is spent.
+  const left = over ? 1 : Math.max(0, Math.min(1, fraction));
+
+  return (
+    <div className="ring-wrap">
+      <svg className="ring" viewBox="0 0 200 200" aria-hidden>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" style={{ stopColor: 'var(--accent)' }} />
+            <stop offset="100%" style={{ stopColor: 'var(--ring-end)' }} />
+          </linearGradient>
+        </defs>
+        <circle className="ring-track" cx="100" cy="100" r={R} />
+        <circle
+          className={`ring-fill ${over ? 'ring-over' : ''}`}
+          cx="100" cy="100" r={R}
+          strokeDasharray={C}
+          strokeDashoffset={C * (1 - left)}
+          // CSS variables only resolve in style, not in SVG attributes.
+          style={{
+            stroke: over ? 'var(--gold)' : `url(#${gradId})`,
+            ['--ring-c' as string]: C,
+          }}
+        />
+      </svg>
+      <div className="ring-center">{children}</div>
+    </div>
+  );
+}
+
+/** Section heading with an icon and an optional right-hand counter. */
+function SecHead({ icon, title, meta }: { icon: string; title: string; meta?: React.ReactNode }) {
+  return (
+    <div className="sec-head">
+      <span className="sec-ico" aria-hidden>{icon}</span>
+      <h2 className="sec-title">{title}</h2>
+      {meta != null && <span className="sec-meta num">{meta}</span>}
+    </div>
+  );
+}
+
 export default function Dashboard({
   state, onEdit, onDelete,
 }: {
@@ -24,7 +80,6 @@ export default function Dashboard({
   const { budget, xp, streak, settings } = state;
   const cur = settings.currency;
 
-  // Percentage of budget consumed, shown alongside the gauge.
   const pctUsed = budget.total > 0
     ? Math.round((budget.spent / budget.total) * 100) : 0;
 
@@ -32,153 +87,145 @@ export default function Dashboard({
     .toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     .toUpperCase();
 
+  const questsDone = state.quests.filter((q) => q.completed).length;
+  const badgesOwned = BADGES.filter((b) => state.badges.includes(b.slug)).length;
+  const catMax = state.byCategory[0]?.total || 1;
+
   return (
     <div className="screen">
-      {/* ── Greeting header ── */}
-      <div className="home-head">
-        <div>
-          <div className="home-month">{monthLabel}</div>
-          <div className="home-greeting">{greeting()} 👋</div>
-        </div>
-        <div className="level-dot" title={`Level ${xp.level}`}>L{xp.level}</div>
-      </div>
-
-      {/* ── Budget as a resource bar, never a debt counter ── */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="spread" style={{ marginBottom: 10 }}>
-          <div className="stat">
-            <span className="stat-label">{budget.over ? 'Over by' : 'Left this month'}</span>
-            <span className="stat-value">
-              {formatMoney(Math.abs(budget.remaining), cur)}
-            </span>
+      {/* ── HUD: who you are, what's left, how far you've come ── */}
+      <section className="hud" aria-label="Overview">
+        <div className="hud-top">
+          <div>
+            <div className="home-month">{monthLabel}</div>
+            <div className="home-greeting">{greeting()} 👋</div>
           </div>
-          <div className="stat" style={{ alignItems: 'flex-end' }}>
+          <div className="lv-badge" aria-label={`Level ${xp.level}`}>
+            <span className="lv-badge-label">LV</span>
+            <span className="lv-badge-num num">{xp.level}</span>
+          </div>
+        </div>
+
+        <BudgetRing fraction={budget.fraction} over={budget.over}>
+          <span className="ring-label">{budget.over ? 'Over by' : 'Left this month'}</span>
+          <span className="ring-value num">{formatMoney(Math.abs(budget.remaining), cur)}</span>
+          <span className="ring-sub num">
+            {budget.over
+              ? `Resets to ${formatMoney(budget.total, cur)}`
+              : `of ${formatMoney(budget.total, cur)}`}
+          </span>
+        </BudgetRing>
+
+        <div className="hud-stats">
+          <div className="hud-stat">
             <span className="stat-label">Spent</span>
-            <span className="stat-value" style={{ fontSize: 18, color: 'var(--text-dim)' }}>
-              {formatMoney(budget.spent, cur)}
+            <span className="hud-stat-val num">{formatMoney(budget.spent, cur)}</span>
+          </div>
+          <div className="hud-stat">
+            <span className="stat-label">Used</span>
+            <span className="hud-stat-val num">{pctUsed}%</span>
+          </div>
+          <div className="hud-stat">
+            <span className="stat-label">Today</span>
+            <span className="hud-stat-val num">{formatMoney(state.todayTotal, cur)}</span>
+          </div>
+        </div>
+
+        <div className="hud-xp">
+          <div className="hud-xp-row">
+            <span className="hud-xp-lv">⚡ Level {xp.level}</span>
+            <span className="tiny num">
+              {xp.xpIntoLevel}<span className="faint"> / {xp.xpForNextLevel} XP</span>
             </span>
           </div>
+          <div className="glow-track">
+            <div className="glow-fill" style={{ width: `${xp.progress * 100}%` }} />
+          </div>
         </div>
-        <div className="gauge-track">
-          <div className="gauge-fill" style={{ width: `${budget.fraction * 100}%` }} />
-        </div>
-        <div className="spread" style={{ marginTop: 8 }}>
-          <span className="tiny faint">{pctUsed}% used</span>
-          <span className="tiny faint">Budget: {formatMoney(budget.total, cur)}</span>
-        </div>
-        {budget.over && (
-          // Framing stays neutral and forward-looking — no red alarm, no shame.
-          <p className="tiny muted" style={{ margin: '10px 0 0' }}>
-            Over by {formatMoney(Math.abs(budget.remaining), cur)} this month.
-            Next month resets to {formatMoney(budget.total, cur)}.
-          </p>
-        )}
-      </div>
 
-      {/* ── Level, then the streak strip on its own full-width row ── */}
-      <div className="duo duo-stack">
-        <div className="card">
-          <span className="pill pill-gold">Level {xp.level}</span>
-          <div className="tiny faint num" style={{ margin: '8px 0 6px' }}>
-            {xp.xpIntoLevel} / {xp.xpForNextLevel} XP
-          </div>
-          <div className="xp-track">
-            <div className="xp-fill" style={{ width: `${xp.progress * 100}%` }} />
-          </div>
-        </div>
-        <div className="card">
+        <div className="hud-streak">
           <StreakStrip today={state.today}
                        activeDates={streak.activeDates ?? []}
                        current={streak.current} />
-          <div className="tiny faint" style={{ marginTop: 'var(--s2)' }}>
-            {streak.freezeAvailable ? '❄️ Freeze ready' : '❄️ Freeze used'}
-          </div>
+          <span className={`freeze ${streak.freezeAvailable ? 'freeze-ready' : ''}`}>
+            ❄️ {streak.freezeAvailable ? 'Freeze ready' : 'Freeze used'}
+          </span>
         </div>
-      </div>
+      </section>
 
       {/* ── Weekly quests ── */}
       {state.quests.length > 0 && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div className="screen-title" style={{ margin: '0 0 10px' }}>This week</div>
-          {state.quests.map((q) => {
-            const pct = q.target > 0 ? Math.min(1, q.progress / q.target) : 0;
-            return (
-              <div key={q.slug} style={{ marginBottom: 10 }}>
-                <div className="spread" style={{ marginBottom: 4 }}>
-                  <span className="small" style={{ fontWeight: 600 }}>
-                    {q.completed ? '✅ ' : ''}{q.title}
-                  </span>
-                  <span className="tiny faint num">
-                    {Math.round(q.progress * 100) / 100}/{Math.round(q.target * 100) / 100}
-                  </span>
+        <section className="block">
+          <SecHead icon="⚔️" title="Weekly quests" meta={`${questsDone}/${state.quests.length}`} />
+          <div className="quest-list">
+            {state.quests.map((q) => {
+              const pct = q.target > 0 ? Math.min(1, q.progress / q.target) : 0;
+              const fmt = (n: number) => Math.round(n * 100) / 100;
+              return (
+                <div key={q.slug} className={`quest ${q.completed ? 'quest-done' : ''}`}>
+                  <div className="spread">
+                    <span className="quest-title">
+                      {q.completed && <span aria-hidden>✅ </span>}{q.title}
+                    </span>
+                    <span className="quest-xp num">+{XP_QUEST_COMPLETE} XP</span>
+                  </div>
+                  <div className="quest-bar">
+                    <div className="glow-track glow-track-thin">
+                      <div className="glow-fill" style={{ width: `${pct * 100}%` }} />
+                    </div>
+                    <span className="tiny faint num">{fmt(q.progress)}/{fmt(q.target)}</span>
+                  </div>
                 </div>
-                <div className="xp-track">
-                  <div className="xp-fill" style={{
-                    width: `${pct * 100}%`,
-                    background: q.completed ? 'var(--accent)' : 'var(--gold)',
-                  }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       {/* ── Today ── */}
-      <div className="card" style={{ marginBottom: 12 }}>
-        <div className="spread" style={{ marginBottom: 4 }}>
-          <div className="screen-title" style={{ margin: 0 }}>Today</div>
-          <span className="small num" style={{ fontWeight: 700 }}>
-            {formatMoney(state.todayTotal, cur)}
-          </span>
-        </div>
+      <section className="block card">
+        <SecHead icon="📅" title="Today" meta={formatMoney(state.todayTotal, cur)} />
         <EntryList expenses={state.todayExpenses} currency={cur}
                    onEdit={onEdit} onDelete={onDelete} />
-      </div>
+      </section>
 
-      {/* ── Category breakdown ── */}
+      {/* ── Category breakdown: one colour per category so they're tellable apart ── */}
       {state.byCategory.length > 0 && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div className="screen-title" style={{ margin: '0 0 8px' }}>This month by category</div>
-          {state.byCategory.map((c) => {
-            const max = state.byCategory[0].total || 1;
-            const name = CATEGORY_MAP[c.category]?.label ?? c.category;
+        <section className="block card">
+          <SecHead icon="📊" title="This month by category" />
+          {state.byCategory.map((c, i) => {
+            const def = CATEGORY_MAP[c.category];
             return (
-              <div key={`${c.category}-${c.subtype ?? ''}`} style={{ marginBottom: 9 }}>
-                <div className="spread" style={{ marginBottom: 3 }}>
-                  <span className="small">
-                    {CATEGORY_MAP[c.category]?.icon} {name}
-                    {c.subtype && <span className="faint"> · {c.subtype}</span>}
-                  </span>
-                  <span className="small num">{formatMoney(c.total, cur)}</span>
-                </div>
-                <div className="xp-track">
-                  <div className="xp-fill" style={{
-                    width: `${(c.total / max) * 100}%`, background: 'var(--accent)',
-                  }} />
+              <div key={`${c.category}-${c.subtype ?? ''}`} className="cat-row"
+                   style={{ ['--cat' as string]: `var(--cat-${(i % 6) + 1})` }}>
+                <span className="cat-row-ico" aria-hidden>{def?.icon}</span>
+                <div className="cat-row-main">
+                  <div className="spread">
+                    <span className="small">
+                      {def?.label ?? c.category}
+                      {c.subtype && <span className="faint"> · {c.subtype}</span>}
+                    </span>
+                    <span className="small num">{formatMoney(c.total, cur)}</span>
+                  </div>
+                  <div className="cat-bar">
+                    <div className="cat-bar-fill" style={{ width: `${(c.total / catMax) * 100}%` }} />
+                  </div>
                 </div>
               </div>
             );
           })}
-        </div>
+        </section>
       )}
 
       {/* ── Health: tracked, deliberately outside the budget ── */}
       {state.care && state.care.total > 0 && (
-        <div className="card" style={{ marginBottom: 12 }}>
-          <div className="spread" style={{ marginBottom: 4 }}>
-            <div className="screen-title" style={{ margin: 0 }}>🩺 Health</div>
-            <span className="small num" style={{ fontWeight: 700 }}>
-              {formatMoney(state.care.total, cur)}
-            </span>
-          </div>
-          <p className="tiny faint" style={{ margin: '0 0 10px' }}>
-            This month, outside your budget.
-          </p>
+        <section className="block card">
+          <SecHead icon="🩺" title="Health" meta={formatMoney(state.care.total, cur)} />
+          <p className="tiny faint care-note">This month, outside your budget.</p>
           {state.care.bySubtype.map((r) => {
             const def = CARE_SUBTYPES.find((c) => c.slug === r.subtype);
             return (
-              <div key={r.subtype ?? 'none'} className="spread" style={{ marginBottom: 6 }}>
+              <div key={r.subtype ?? 'none'} className="spread care-row">
                 <span className="small">
                   {def?.icon ?? '•'} {def?.label ?? 'Other'}
                   <span className="faint"> · {r.n}</span>
@@ -187,17 +234,17 @@ export default function Dashboard({
               </div>
             );
           })}
-        </div>
+        </section>
       )}
 
-      {/* ── Badges ── */}
-      <div className="card">
-        <div className="screen-title" style={{ margin: '0 0 10px' }}>Badges</div>
+      {/* ── Badges: a trophy shelf ── */}
+      <section className="block card">
+        <SecHead icon="🏅" title="Badges" meta={`${badgesOwned}/${BADGES.length}`} />
         <div className="badge-grid">
           {BADGES.map((b) => {
             const owned = state.badges.includes(b.slug);
             return (
-              <div key={b.slug} className={`badge ${owned ? '' : 'badge-locked'}`}
+              <div key={b.slug} className={`badge ${owned ? 'badge-owned' : 'badge-locked'}`}
                    title={owned ? b.label : b.hint}>
                 <span className="badge-ico" aria-hidden>{b.icon}</span>
                 <span className="badge-label">{b.label}</span>
@@ -205,7 +252,7 @@ export default function Dashboard({
             );
           })}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
