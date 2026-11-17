@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { findByEmail, issueToken, tooManyAttempts, recordAttempt,
          normalizeEmail } from '@/lib/accounts';
-import { sendPasswordResetEmail } from '@/lib/email';
+import { sendPasswordResetEmail, sendNoAccountEmail } from '@/lib/email';
 import { clientIp } from '@/lib/request-ip';
 
 /**
  * Always answers "check your inbox", whether or not the address exists.
- * Confirming which emails are registered would leak the user list.
+ * Confirming which emails are registered would leak the user list. The real
+ * answer goes to the inbox instead: a reset link if there is an account, a
+ * "no account with this email" note if there is not.
  */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -24,11 +26,14 @@ export async function POST(req: Request) {
   await recordAttempt(ipKey, 'reset');
 
   const user = await findByEmail(email);
-  if (!user) return ok;
 
   try {
-    const token = await issueToken(user.id, 'reset_password', 60);
-    await sendPasswordResetEmail(email, token);
+    if (user) {
+      const token = await issueToken(user.id, 'reset_password', 60);
+      await sendPasswordResetEmail(email, token);
+    } else {
+      await sendNoAccountEmail(email);
+    }
   } catch { /* never surface mail failures to the caller */ }
 
   return ok;

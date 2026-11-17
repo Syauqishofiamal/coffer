@@ -82,3 +82,20 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
       { label: 'Choose a new password', url }),
   });
 }
+
+/**
+ * Sent when someone asks to reset a password for an address with no account.
+ * The screen never says whether an email is registered (that would leak the
+ * user list); only whoever owns the inbox learns it, from this email.
+ */
+export async function sendNoAccountEmail(to: string): Promise<void> {
+  const url = `${appUrl()}/login`;
+  await sendMail({
+    to,
+    subject: 'Coffer password reset: no account found',
+    text: `Someone asked to reset a Coffer password for this email address, but there is no Coffer account with this email.\n\nIf it was you, you may have signed up with a different email, or you can create an account: ${url}\n\nIf it was not you, you can ignore this email.`,
+    html: wrap('No account with this email',
+      'Someone asked to reset a Coffer password for this address, but there is no Coffer account with this email. If it was you, you may have signed up with a different email, or you can create an account below. If it was not you, you can ignore this email.',
+      { label: 'Go to Coffer', url }),
+  });
+}
